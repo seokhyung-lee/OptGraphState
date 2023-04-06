@@ -35,68 +35,103 @@ class OptGraphState:
                  unraveled_graph=None,
                  fusion_network=None):
         """
-        Class for calculating and optimizing the resource overhead of the fusion-based generation of a graph
-        state.
+        Class for calculating and optimizing the resource overhead of the
+        fusion-based generation of a graph state.
 
-        The graph of the concerned graph state can be given by the following three ways:
+        The graph of the concerned graph state can be given by the following
+        three ways:
         1. Given explicitly as igraph.Graph or networkx.Graph.
         2. Given by a list of edges.
         3. Chosen among predefined graphs.
 
-        An unraveled graph and a fusion network of the graph can be explicitly given by the parameters
-        'unraveled_graph' and 'fusion_network', respectively, which should be igraph.Graph.
-
         Parameters
         ----------
-        graph : None or igraph.Graph or networkx.Graph
-            Graph of the concerned graph. If it is given, 'edges', 'shape', and 'prms' are ignored.
-            If it is networkx.Graph, it is internally converted to igraph.Graph.
+        graph : None or igraph.Graph or networkx.Graph (default: None)
+            Graph of the concerned graph.
+            If it is given, 'edges', 'shape', and 'prms' are ignored. If it
+            is networkx.Graph, it is internally converted to igraph.Graph.
 
-        edges : None or list of 2-tuples of integers
-            List of edges that form the concerned graph. Each integer in the tuples indicates a vertex label.
-            If it is given and 'graph' is None, 'shape' and 'prms' are ignored.
+        edges : None or list of 2-tuple of int (default: None)
+            List of edges that form the concerned graph.
+            Each integer in the tuples indicates a vertex label. If it is
+            given and 'graph' is None, 'shape' and 'prms' are ignored.
 
-        shape : None or str.
+        shape : None or str (default: None)
             Shape of the concerned graph chosen among predefined graphs.
-            One of [None, 'random', 'complete', 'star', 'linear', 'cycle', 'lattice', 'tree', 'rhg',
-            'repeater', 'parity_encoding', 'ptqc'].
+            One of [None, 'random', 'complete', 'star', 'linear', 'cycle',
+            'lattice', 'tree', 'rhg', 'repeater', 'parity_encoding', 'ptqc'].
 
-            > shape='random' : Random graph for fixed numbers of vertices and edges, sampled by the Erdos-Renyi
-            model.
-                - prms[0] (int) : Number of vertices.
-                - prms[1] (int) : Number of edges.
-            > shape='complete','star','linear','cycle' : Complete, star, linear, and cycle graph, respectively.
-                - prms[0] (int) : Number of vertices.
+            > shape='random' : Random graph for fixed numbers of vertices
+            and edges, sampled by the Erdos-Renyi model.
+            - prms[0] (int) : Number of vertices.
+            - prms[1] (int) : Number of edges.
+
+            > shape='complete','star','linear','cycle' : Complete, star,
+            linear, and cycle graph, respectively.
+            - prms[0] (int) : Number of vertices.
+
             > shape='lattice' : 2D lattice graph.
-                - prms (2-tuple ints) : Numbers of repeated vertices along the two axes.
-            > shape='tree' : Tree graph where all branches in each generation has an equal number of children.
-                - prms[0] (int) : Degree of the root vertex.
-                - prms[i] (int, i >= 1) : Number of the children of each ith-generation branch.
-            > shape='rhg' : Raussendorf-Harrington-Goyal lattice where all the three bondaries are primal.
-                - prms (3-tuple of ints) : Size of the lattice along the three axes in the unit of a cell.
+            - prms (2-tuple of int) : Numbers of repeated vertices along the
+            two axes.
+
+            > shape='tree' : Tree graph where all branches in each
+            generation has an equal number of children.
+            - prms[0] (int) : Degree of the root vertex.
+            - prms[i] (int, i >= 1) : Number of the children of each
+            ith-generation branch.
+
+            > shape='rhg' : Raussendorf-Harrington-Goyal lattice where all
+            the three bondaries are primal.
+            - prms (3-tuple of int) : Size of the lattice along the three
+            axes in the unit of a cell.
+
             > shape='repeater' : Repeater graph with 4m vertices.
-                - prms[0] (int) : Parameter 'm'.
+            - prms[0] (int) : Parameter 'm'.
+
             > shape='parity_encoding' : (n, m) parity-encoded graph.
-                - prms[0] (ig.Graph) : Logical-level graph.
-                - prms[1], prms[2] (int) : Parameters 'n' and 'm' of the parity encoding.
-            > shape='ptqc' : Microcluster for parity-encoding-based topological quantum computing protocol.
-                - prms[0], prms[1] (int) : Parameter 'n' and 'm' of the parity encoding.
-                - prms[2] (bool) : H-configuration.
-                - prms[3] (bool) : Whether the microcluster is central (True) or side (False) one.
+            - prms[0] (igraph.Graph) : Logical-level graph. Can be directly
+            generated by python-igraph package or obtained from function
+            'get_graph_from_edges' or 'get_sample_graph'.
+            - prms[1], prms[2] (int) : Parameters 'n' and 'm' of the parity
+            encoding.
 
-        prms : None or tuple of (ints or ig.Graph or bool)
-            Parameters for a predefined graph. See the description for 'shape'.
+            > shape='ptqc' : Microcluster for parity-encoding-based
+            topological quantum computing protocol.
+            - prms[0], prms[1] (int) : Parameter 'n' and 'm' of the parity
+            encoding.
+            - prms[2] (bool) : Whether the H-configuration is HIC (True) or
+            HIS (False).
+            - prms[3] (bool) : Whether the microcluster is central (True) or
+            side (False) one.
 
-        cliffords : None or list of str
-            Local clifford operations applied on the qubits of the graph state.
+        prms : None or tuple of {int or igraph.Graph or bool}
+        (default: None | ignored if 'shape' is None)
+            Parameters for a predefined graph.
+            See the description for parameter 'shape'.
+
+        cliffords : None or list of str (default: None)
+            Local clifford operations applied on the qubits of the graph
+            state.
+            If it is None, no Clifford operations are applied on the qubits.
+            If it is a list of str, its length should be equal to the number
+            of vertices in the graph. Its i-th element indicates the
+            Clifford operation applied on the i-th qubit. For example,
+            if it is 'H', it means that a Hadamard gate is applied on the
+            qubit. If it is 'H-S-Z', it means that Hadamard, phase,
+            and Z gates are applied in order.
 
         unraveled_graph : None or igraph.Graph or networkx.Graph
-            Pregiven unraveled graph. The code does not check the validity of the given unraveled graph.
-            If it is networkx.Graph, it is internally converted to igraph.Graph.
+        (default: None)
+            Pregiven unraveled graph.
+            The code does not check the validity of the given unraveled graph.
+            If it is networkx.Graph, it is internally converted to
+            igraph.Graph.
 
-        fusion_network : None or igraph.Graph or networkx.Graph
-            Pregiven fusion network. The code does not check the validity of the given fusion network.
-            If it is networkx.Graph, it is internally converted to igraph.Graph.
+        fusion_network : None or igraph.Graph or networkx.Graph (default: None)
+            Pregiven fusion network.
+            The code does not check the validity of the given fusion network.
+            If it is networkx.Graph, it is internally converted to
+            igraph.Graph.
         """
 
         def convert_type(g, varname):
@@ -107,7 +142,8 @@ class OptGraphState:
             elif isinstance(g, nx.Graph):
                 return ig.Graph.from_networkx(g)
             else:
-                raise TypeError(f'Parameter {varname} should be igraph.Graph or networkx.Graph.')
+                raise TypeError(f'Parameter {varname} should be igraph.Graph '
+                                f'or networkx.Graph.')
 
         if graph is not None:
             self.graph = convert_type(graph, 'graph')
@@ -121,12 +157,16 @@ class OptGraphState:
             self.graph, self.graph_info = get_sample_graph(shape, *prms)
 
         else:
-            raise ValueError("At least one of graph, edges, and shape should be given.")
+            raise ValueError(
+                "At least one of graph, edges, and shape should be given.")
 
         if self.graph_info is None:
-            self.graph_info = {'num_vertices': self.graph.vcount(), 'num_edges': self.graph.ecount()}
+            self.graph_info = {
+                'num_vertices': self.graph.vcount(),
+                'num_edges': self.graph.ecount()}
 
-        self.graph.vs['name'] = [str(vid) for vid in range(self.graph.vcount())]
+        self.graph.vs['name'] = [str(vid) for vid in
+                                 range(self.graph.vcount())]
 
         if cliffords is not None and edges is None:
             self.graph.vs['clifford'] = cliffords
@@ -141,7 +181,8 @@ class OptGraphState:
 
     def initialize(self):
         """
-        Initialize the created unraveled graph and fusion network.
+        Initialize the created unraveled graph and fusion network and the
+        calculation data.
         """
         self.unraveled_graph = None
         self.fusion_network = None
@@ -151,20 +192,24 @@ class OptGraphState:
 
     def get_vertex_data(self, vertex):
         """
-        Get the data of a vertex of the unraveled graph or a node of the fusion network.
+        Get the data of a vertex of the unraveled graph or a node of the
+        fusion network.
 
-        For a given vertex name, it returns the attribute data of the vertex or node with the same name in the
-        unraveled graph and fusion network.
+        For a given vertex name, it returns the attribute data of the vertex
+        or node that has the same name in the unraveled graph and fusion
+        network.
 
         Parameters
         ----------
         vertex : str or int
             Name of the vertex.
+            If an integer is entered, it is internally converted to a string.
 
         Return
         ------
         data : dict
-            Data of the vertex or node in the unraveled graph and fusion network.
+            Data of the vertex or node in the unraveled graph and fusion
+            network.
         """
         name = vertex if isinstance(vertex, str) else str(vertex)
         data = {}
@@ -185,7 +230,10 @@ class OptGraphState:
 
         return data
 
-    def unravel_graph(self, unravel_bcs_first='random', plot=False, verbose=False):
+    def unravel_graph(self,
+                      unravel_bcs_first='random',
+                      plot=False,
+                      verbose=False):
         """
         Unravel bipartitely-complete subgraphs (BCSs) and cliques of the graph.
 
@@ -194,14 +242,36 @@ class OptGraphState:
         Parameters
         ----------
         unravel_bcs_first : one of [True, False, 'random'] (default: 'random')
-            If it is True, BCSs are unraveled first.
-            If it is False, cliques are unraveled first.
+            If it is True, BCSs are unraveled first, then clqiues are
+            unraveled.
+            If it is False, cliques are unraveled first, then BCSs are
+            unraveled.
             If it is 'random', the order is randomly chosen.
+
         plot : bool (default: False)
             Whether to plot the unraveled graph after unraveling.
-        verbose : bool (default: False)
 
+        verbose : bool (default: False)
+            Whether to print logs and plot the intermediate graphs during
+            the unraveling process.
+
+        Returns
+        -------
+        bcss : list of list of 2-tuple of list of str
+            Data on unraveled BCSs, which is identical with
+            self.unraveled_bcss.
+            bcss[i][j][k][l] (k=0 or 1) is the name of the l-th vertex in
+            the k-th part of the j-th BCS obtained by the i-th cycle of
+            finding non-overlapping BCSs.
+
+        cliques : list of list of set of str
+            Data on unraveled cliques, which is identical with
+            self.unraveled_cliques.
+            cliques[i][j] is the set of the names of the vertices in the
+            $j$-th clique obtained by the $i$-th cycle of finding
+            non-overlapping cliques.
         """
+
         if unravel_bcs_first == 'random':
             unravel_bcs_first = np.random.choice([True, False])
 
@@ -221,10 +291,27 @@ class OptGraphState:
         self.data['unravel'] = True
         self.data['unravel_bcs_first'] = unravel_bcs_first
 
-        return bcss, cliques
+        return self.unraveled_graph, bcss, cliques
 
-    # @logging_time
     def unravel_bipartitely_complete_subgraphs(self, verbose=False):
+        """
+        Unravel bipartitely-complete subgraphs (BCSs) of the graph.
+
+        The unraveled graph is saved in self.unraveled_graph as igraph.Graph.
+
+        Parameters
+        ----------
+        verbose : bool (default: False)
+            Whether to print logs and plot the intermediate graphs during
+            the unraveling process.
+
+        Returns
+        -------
+        bcss : list of list of 2-tuple of list of str
+            Data on unraveled BCSs.
+            See the docstring of self.unravel_graph.
+        """
+
         if self.unraveled_graph is None:
             self.unraveled_graph = self.graph.copy()
 
@@ -236,22 +323,21 @@ class OptGraphState:
         if 'clifford' not in vs_attrs:
             graph.vs['clifford'] = None
 
-        unraveled_bcss = {}
+        unraveled_bcss = []
 
         new_vertex_name = graph.vcount()
 
-        stage = 1
         while True:
             # Repeat until there are no bipartitely-complete subgraphs
             bcs_exist = False
             while True:
-                bcss = find_all_nonoverlapping_bcs(graph, get_name=True)
+                bcss = find_nonoverlapping_bcs(graph, get_name=True)
                 if bcss:
                     bcs_exist = True
                 else:
                     break
 
-                unraveled_bcss[stage] = bcss
+                unraveled_bcss.append(bcss)
                 eids_to_remove = []
                 for part1, part2 in bcss:
                     if verbose:
@@ -270,65 +356,50 @@ class OptGraphState:
                                         vertex_color=vertex_color)
                         plt.show()
 
-                    eids_to_remove.extend([graph.get_eid(vname1, vname2) for vname1, vname2
-                                           in itertools.product(part1, part2)])
+                    eids_to_remove.extend([graph.get_eid(vname1, vname2) for
+                                           vname1, vname2 in
+                                           itertools.product(part1, part2)])
 
                     vname1 = str(new_vertex_name)
                     vname2 = str(new_vertex_name + 1)
-                    new_v1 = graph.add_vertex(name=vname1, ext_fusion=vname2, clifford=None)
-                    new_v2 = graph.add_vertex(name=vname2, ext_fusion=vname1, clifford=None)
+                    new_v1 = graph.add_vertex(name=vname1,
+                                              ext_fusion=vname2,
+                                              clifford=None)
+                    new_v2 = graph.add_vertex(name=vname2,
+                                              ext_fusion=vname1,
+                                              clifford=None)
                     new_vertex_name += 2
-                    # ext_fusions.append((new_v1['name'], new_v2['name'], bcs))
 
                     graph.add_edges(itertools.product([new_v1], part1))
                     graph.add_edges(itertools.product([new_v2], part2))
 
                 graph.delete_edges(eids_to_remove)
 
-                stage += 1
-
             if not bcs_exist:
                 break
-
-            # if stage == 2:
-            #     continue
-
-            # Rejoin unnecessary external fusions
-            # np.random.shuffle(ext_fusions)
-            # rejoined_bcss = []
-            # for i_ext_fusion, ext_fusion in enumerate(ext_fusions):
-            #     vname1, vname2, bcs = ext_fusion
-            #
-            #     try:
-            #         if graph.degree(vname1) == 1 or graph.degree(vname2) == 1:
-            #             # vids_to_remove.extend([vid1, vid2])
-            #
-            #             if verbose:
-            #                 print(f'rejoined fusion = ({vname1}, {vname2})')
-            #                 self.plot_graph(unraveled=True,
-            #                                 vertices_to_highlight=[vname1, vname2],
-            #                                 vertex_color_highlight='orange')
-            #                 plt.show()
-            #
-            #             new_edges = itertools.product(graph.neighbors(vname1), graph.neighbors(vname2))
-            #             rejoined_bcss.append(bcs)
-            #             graph.add_edges(new_edges)
-            #             graph.delete_vertices([vname1, vname2])
-            #     except ValueError:
-            #         pass
-            #
-            # if rejoined_bcss:
-            #     unraveled_bcss[f'rejoined_{stage}'] = rejoined_bcss
-            #
-            # else:
-            #     break
 
         self.unraveled_bcss = unraveled_bcss
 
         return unraveled_bcss
 
-    # @logging_time
     def unravel_cliques(self, verbose=False):
+        """
+        Unravel cliques of the graph.
+
+        The unraveled graph is saved in self.unraveled_graph as igraph.Graph.
+
+        Parameters
+        ----------
+        verbose : bool (default: False)
+            Whether to print logs and plot the intermediate graphs during
+            the unraveling process.
+
+        Returns
+        -------
+        cliques : list of list of set of str
+            Data on unraveled cliques.
+            See the docstring of self.unravel_graph.
+        """
         if self.unraveled_graph is None:
             self.unraveled_graph = self.graph.copy()
 
@@ -340,8 +411,7 @@ class OptGraphState:
         if 'clifford' not in vs_attrs:
             graph.vs['clifford'] = None
 
-        unraveled_cliques = {}
-        stage = 1
+        unraveled_cliques = []
 
         def apply_clifford(v, clifford):
             org_clifford = v['clifford']
@@ -352,17 +422,18 @@ class OptGraphState:
             v['clifford'] = new_clifford
 
         while True:
-            cliques = find_all_nonoverlapping_cliques(graph, get_name=True)
+            cliques = find_nonoverlapping_cliques(graph, get_name=True)
 
             if not cliques:
                 break
 
-            unraveled_cliques[stage] = cliques
+            unraveled_cliques.append(cliques)
 
             for clique in cliques:
                 if verbose:
                     print('clique to unravel =', clique)
-                    vertex_color = ['orange' if vname in clique else 'white' for vname in graph.vs['name']]
+                    vertex_color = ['orange' if vname in clique else 'white'
+                                    for vname in graph.vs['name']]
                     self.plot_graph(unraveled=True, vertex_color=vertex_color)
                     plt.show()
                 clique = list(clique)
@@ -372,8 +443,10 @@ class OptGraphState:
                 degrees = graph.degree(clique)
                 min_degree = min(degrees)
                 if min_degree == clique_size - 1:
-                    # There exists a vertex in the clique that doesn't have outer edges
-                    vname_LC = [vname for vname, deg in zip(clique, degrees) if deg == min_degree]
+                    # There exists a vertex in the clique that doesn't have
+                    # outer edges
+                    vname_LC = [vname for vname, deg in zip(clique, degrees) if
+                                deg == min_degree]
                     need_to_separate = False
                 else:
                     vname_LC = clique
@@ -385,7 +458,8 @@ class OptGraphState:
                     vname_LC = vname_LC[0]
                 v_LC = graph.vs.find(name=vname_LC)
 
-                # Separate the edges (E) incident to v_LC outside the clique from v_LC
+                # Separate the edges (E) incident to v_LC outside the clique
+                # from v_LC
                 eids_to_delete = []
                 if need_to_separate:
                     # Vertex connected with E
@@ -404,11 +478,13 @@ class OptGraphState:
                     for ngh_vid in ngh_vids:
                         if graph.vs[ngh_vid]['name'] not in clique:
                             graph.add_edge(ngh_vid, new_v1)
-                            eids_to_delete.append(graph.get_eid(vname_LC, ngh_vid))
+                            eids_to_delete.append(graph.get_eid(vname_LC,
+                                                                ngh_vid))
 
                     vname_org_ext_fusion = v_LC['ext_fusion']
                     if vname_org_ext_fusion is not None:
-                        v_org_ext_fusion = graph.vs.find(name=vname_org_ext_fusion)
+                        v_org_ext_fusion = graph.vs.find(
+                            name=vname_org_ext_fusion)
                         v_org_ext_fusion['ext_fusion'] = new_v1['name']
 
                     v_LC['ext_fusion'] = new_v2['name']
@@ -420,23 +496,39 @@ class OptGraphState:
                     adj_v = graph.vs.find(name=adj_vname)
                     apply_clifford(adj_v, 'R_Z')
 
-                new_eids_to_delete = [graph.get_eid(vname1, vname2) for vname1, vname2
-                                      in itertools.combinations(adj_vnames, r=2)]
+                new_eids_to_delete = [graph.get_eid(vname1, vname2) for
+                                      vname1, vname2 in
+                                      itertools.combinations(adj_vnames, r=2)]
                 eids_to_delete.extend(new_eids_to_delete)
                 graph.delete_edges(eids_to_delete)
-
-            stage += 1
 
         self.unraveled_cliques = unraveled_cliques
 
         return unraveled_cliques
 
-    # @logging_time
     def build_fusion_network(self,
                              use_unraveled_graph=True,
                              plot=False,
-                             verbose=False
-                             ):
+                             verbose=False):
+        """
+        Build a fusion network from the graph.
+
+        The constructed fusion network is saved in self.fusion_network as
+        igraph.Graph.
+
+        Parameters
+        ----------
+        use_unraveled_graph : bool (default: True)
+            Whether to use the unraveled graph (in self.unraveled_graph) or
+            the original graph (in self.graph) for building a fusion network.
+
+        plot : bool (default: False)
+            Whether to plot the fusion network after building it.
+
+        verbose : bool (default: False)
+            Whether to print logs.
+        """
+
         graph = self.unraveled_graph if use_unraveled_graph else self.graph
         if graph is None:
             raise ValueError("No unraveled qubit graph created.")
@@ -455,30 +547,37 @@ class OptGraphState:
                 # Add nodes
                 nid_init = network.vcount()
                 seed = np.random.randint(0, num_internal_nodes)
-                node_names = [vname_xrot if i == 0 else f'{vname_xrot}-{i}'
-                              for i in itertools.chain(range(seed, -1, -1), range(seed + 1, num_internal_nodes))]
+                node_names = [vname_xrot if i == 0 else f'{vname_xrot}-{i}' for
+                              i in itertools.chain(range(seed, -1, -1),
+                                                   range(seed + 1,
+                                                         num_internal_nodes))]
                 attr = {
                     'name': node_names,
-                    'seed': [True if i == seed else False for i in range(num_internal_nodes)],
-                    'clifford_root': None,  # Clifford gate applied on the root qubit
-                    'clifford_leaves': None  # Clifford gate applied on the leaf qubits
+                    'seed': [True if i == seed else False for i in
+                             range(num_internal_nodes)],
+                    'clifford_root': None,
+                    # Clifford gate applied on the root qubit
+                    'clifford_leaves': None
+                    # Clifford gate applied on the leaf qubits
                 }
                 network.add_vertices(num_internal_nodes, attributes=attr)
-                nodes_corr[vname_xrot] = network.vs[nid_init:nid_init + num_internal_nodes]
+                nodes_corr[vname_xrot] = network.vs[
+                                         nid_init:nid_init +
+                                                  num_internal_nodes]
 
                 if num_internal_nodes >= 2:
                     # Connect internal links
-                    links = [(nid, nid + 1) for nid in range(nid_init, nid_init + num_internal_nodes - 1)]
-                    attr = {
-                        # One of RR, RL, and LL, which respectively means that a fusion is performed on two roots,
-                        # one root and one leaf, and two leaves of GHZ-3 states.
-                        'kind': "RL",
-                        # Root node name, if kind == 'RL'
-                        'root_node': [node_names[i + 1] if i < seed else node_names[i]
-                                      for i in range(num_internal_nodes - 1)],
-                        # Whether the fusion is external or internal
-                        # 'external': False,
-                    }
+                    links = [(nid, nid + 1) for nid in range(nid_init,
+                                                             nid_init +
+                                                             num_internal_nodes - 1)]
+                    attr = {  # One of RR, RL, and LL, which respectively means
+                        # that a fusion is performed on two roots,
+                        # one root and one leaf, and two leaves of GHZ-3
+                        # states.
+                        'kind': "RL",  # Root node name, if kind == 'RL'
+                        'root_node': [
+                            node_names[i + 1] if i < seed else node_names[i]
+                            for i in range(num_internal_nodes - 1)]}
                     network.add_edges(links, attributes=attr)
 
         # Links between star graphs
@@ -490,23 +589,24 @@ class OptGraphState:
                 nodes_to_connect = []
                 for v in vs:
                     vname = v['name']
-                    nodes = nodes_corr[vname].select(lambda node: node.degree() < (2 if node['seed'] else 3))
+                    nodes = nodes_corr[
+                        vname].select(lambda node: node.degree() < (
+                        2 if node['seed'] else 3))
                     nodes_to_connect.append(np.random.choice(nodes))
                 network.add_edge(*nodes_to_connect,
                                  kind='LL',
-                                 root_node=None,
-                                 # external=False
-                                 )
+                                 root_node=None, )
 
         if verbose:
             print("Fusion network of the unraveled graph:")
             self.plot_fusion_network()
             plt.show()
 
-        # Set of seed node names where root vertices are connected by external fusions.
+        # Set of seed node names where root vertices are connected by
+        # external fusions.
         root_connected = set()
-        is_node_not_full \
-            = lambda node: node.degree() < (2 if node['seed'] and (node['name'] not in root_connected) else 3)
+        is_node_not_full = lambda node: node.degree() < (
+            2 if node['seed'] and (node['name'] not in root_connected) else 3)
 
         def get_nodes_containing_vertex(vname):
             try:
@@ -578,16 +678,17 @@ class OptGraphState:
 
         self.fusion_network = network
 
-        if plot or verbose:
+        if plot:
             print("Final:")
             self.plot_fusion_network()
             plt.show()
 
-    def contract_edge(self, fusion_network, ename_to_merge):
+    def _contract_edge(self, fusion_network, ename_to_merge):
         ename_to_merge = str(ename_to_merge)
 
         e_to_merge = fusion_network.es.find(name=ename_to_merge)
-        v_merged, v_removed = e_to_merge.source_vertex, e_to_merge.target_vertex
+        v_merged, v_removed = e_to_merge.source_vertex, \
+                              e_to_merge.target_vertex
         enames_updated_weight = []
 
         if v_merged.degree() < v_removed.degree():
@@ -599,10 +700,6 @@ class OptGraphState:
         v_merged['weight'] = e_to_merge['weight']
         v_merged['step'] = max(v_merged['step'], v_removed['step']) + 1
 
-        # if vname_merged == vname_removed:
-        #     # eids_to_delete = [e_to_merge.index]
-        #
-        # else:
         assert vname_merged != vname_removed
 
         eids_to_delete = list(set(fusion_network.incident(v_removed)))
@@ -614,58 +711,83 @@ class OptGraphState:
             if ename_connected != ename_to_merge:
                 enames_updated_weight.append(ename_connected)
                 vs_ngh = e_connected.source_vertex, e_connected.target_vertex
-                new_edge = [v_merged if v_ngh['name'] == vname_removed else v_ngh for v_ngh in vs_ngh]
+                new_edge = [
+                    v_merged if v_ngh['name'] == vname_removed else v_ngh for
+                    v_ngh in vs_ngh]
                 if new_edge[0] == new_edge[1]:  # If a loop is formed
-                    v_vrt = fusion_network.add_vertex(name=f'vrt_{fusion_network.vcount()}', weight=0, step=0)
+                    v_vrt = fusion_network.\
+                        add_vertex(name=f'vrt_{fusion_network.vcount()}',
+                                                      weight=0,
+                                                      step=0)
                     new_edge = [v_merged, v_vrt]
 
                 fusion_network.add_edge(*new_edge,
                                         name=ename_connected,
-                                        weight=None,
-                                        )
+                                        weight=None, )
 
         fusion_network.delete_edges(eids_to_delete)
 
         p_succ = fusion_network['p_succ']
         for eid_connected in list(set(fusion_network.incident(v_merged))):
             e_connected = fusion_network.es[eid_connected]
-            v_ngh1, v_ngh2 = e_connected.source_vertex, e_connected.target_vertex
-            # if v_ngh1.index == v_ngh2.index:
-            #     new_weight = v_ngh1['weight'] / p_succ
-            # else:
+            v_ngh1, v_ngh2 = e_connected.source_vertex, \
+                             e_connected.target_vertex
+
             assert v_ngh1 != v_ngh2
             new_weight = (v_ngh1['weight'] + v_ngh2['weight']) / p_succ
             e_connected['weight'] = new_weight
 
-        self.fusion_network.es.find(name=ename_to_merge)['step'] = v_merged['step']
+        self.fusion_network.es.find(name=ename_to_merge)['step'] = v_merged[
+            'step']
 
         return enames_updated_weight
 
-    # @logging_time
     def calculate_overhead(self,
                            p_succ=0.5,
                            strategy='weight_and_matching',
                            fusion_order=None,
-                           get_fusion_order=False,
-                           # use_gt=False
-                           ):
+                           get_fusion_order=False, ):
         """
-        Sample one generating scheme for a graph state and calculate the correponding resource overhead.
+        Calculate the resource overhead from the fusion network.
+
+        The resulting data is saved in self.data.
 
         Parameters
         ----------
-        eta :
-        strategy :
+        p_succ : float (default: 0.5)
+            Success probability of a fusion.
+
+        strategy
+        : str, one of ['weight', 'matching', 'weight_and_matching', 'random']
+        (default: 'weight_and_matching')
+            Strategy for determining the edge to contract in each step.
+            - 'weight': Contract a random one among the edges with the
+            smallest weight.
+            - 'matching': Contract an edge in a maximum matching.
+            - 'weight_and_matching': Contract an edge in a maximum matching
+            of the subgraph of the intermediate fusion network induced by
+            the edges with the smallest weight. Same as the
+            'min-weight-maximum-matching-first' method in the manuscript.
+            - 'random': Contract a random edge.
+
+        fusion_order : None or list of (int or str) (default: None)
+            Fusion order given explicitly as vertex names.
+            If it is not None, parameter 'strategy' is ignored.
+
+        get_fusion_order : bool (default: False)
+            Whether to include the determined fusion order in the returned
+            data.
 
         Returns
         -------
+        data : dict
+            Outcomes of the calculation, which is a shallow copy of self.data.
+            The calculated overhead and number of steps can be obtained from
+            data['overhead'] and data['step'], respectively.
         """
 
         if self.fusion_network is None:
             raise ValueError("No fusion network created")
-
-        # if use_gt and not is_graph_tool_imported():
-        #     raise ModuleNotFoundError('Module graph-tool is not installed.')
 
         # Trivial cases
         node_num = self.fusion_network.vcount()
@@ -697,10 +819,6 @@ class OptGraphState:
 
         turn = 0
 
-        # t_converting = 0
-        # t_matching = 0
-        # t_postprocess = 0
-
         # Iterate until no edges remain in the fusion network
         while True:
             if not network.ecount():
@@ -716,23 +834,25 @@ class OptGraphState:
                 enames_curr_step = eids_min_weight['name']
                 is_parellel = len(enames_curr_step) == 1
 
-            elif strategy == 'betweenness':
-                eb = np.array(network.edge_betweenness())
-                min_eb = np.min(eb)
-                eids_curr_step = np.nonzero(eb == min_eb)[0]
-                enames_curr_step = [network.es[eid]['name'] for eid in eids_curr_step]
-                is_parellel = len(enames_curr_step) == 1
-
-            elif strategy == 'weight_and_betweenness':
-                min_weight = min(network.es['weight'])
-                eids_min_weight = network.es.select(weight=min_weight)
-                es_min_ovh = eids_min_weight
-
-                eb = network.edge_betweenness()
-                ebs_min_ovh = np.array([eb[e.index] for e in es_min_ovh])
-                min_eb = np.min(ebs_min_ovh)
-                enames_curr_step = [es_min_ovh[i]['name'] for i in np.nonzero(ebs_min_ovh == min_eb)[0]]
-                is_parellel = len(enames_curr_step) == 1
+            # elif strategy == 'betweenness':
+            #     eb = np.array(network.edge_betweenness())
+            #     min_eb = np.min(eb)
+            #     eids_curr_step = np.nonzero(eb == min_eb)[0]
+            #     enames_curr_step = [network.es[eid]['name'] for eid in
+            #     eids_curr_step]
+            #     is_parellel = len(enames_curr_step) == 1
+            #
+            # elif strategy == 'weight_and_betweenness':
+            #     min_weight = min(network.es['weight'])
+            #     eids_min_weight = network.es.select(weight=min_weight)
+            #     es_min_ovh = eids_min_weight
+            #
+            #     eb = network.edge_betweenness()
+            #     ebs_min_ovh = np.array([eb[e.index] for e in es_min_ovh])
+            #     min_eb = np.min(ebs_min_ovh)
+            #     enames_curr_step = [es_min_ovh[i]['name'] for i in
+            #     np.nonzero(ebs_min_ovh == min_eb)[0]]
+            #     is_parellel = len(enames_curr_step) == 1
 
             elif 'matching' in strategy:
                 if strategy == 'weight_and_matching':
@@ -742,39 +862,10 @@ class OptGraphState:
                 else:
                     subnetwork = network
 
-                # for eid, loop in enumerate(subnetwork.is_loop()):
-                #     if loop:
-                #         if subnetwork is network:
-                #             subnetwork = network.copy()
-                #
-                #         edge = subnetwork.es[eid]
-                #         v_connected = edge.source_vertex
-                #         v_temp = subnetwork.add_vertex()
-                #         subnetwork.add_edge(v_connected, v_temp, name=edge['name'])
-
-                # if use_gt:
-                #     # t0 = time.time()
-                #     subnetwork_gt = subnetwork.to_graph_tool(edge_attributes={'name': 'string'})
-                #     # t_converting += time.time() - t0
-                #     # t0 = time.time()
-                #     matching = gt.max_cardinality_matching(subnetwork_gt, edges=True)
-                #     # t_matching += time.time() - t0
-                #     # t0 = time.time()
-                #     es_curr_step = gt.find_edge(subnetwork_gt, matching, 1)
-                #     enames = subnetwork_gt.ep['name']
-                #     enames_curr_step = [enames[e] for e in es_curr_step]
-                #     # t_postprocess += time.time() - t0
-
-                # else:
-                # t0 = time.time()
                 subnetwork_nx = subnetwork.to_networkx()
-                # t_converting += time.time() - t0
-                # t0 = time.time()
                 matching = nx.max_weight_matching(subnetwork_nx, weight=None)
-                # t_matching += time.time() - t0
-                # t0 = time.time()
-                enames_curr_step = subnetwork.es[subnetwork.get_eids(matching)]['name']
-                # t_postprocess += time.time() - t0
+                enames_curr_step = \
+                    subnetwork.es[subnetwork.get_eids(matching)]['name']
 
                 is_parellel = True
 
@@ -811,11 +902,14 @@ class OptGraphState:
                     enames_curr_step.remove(ename_to_merge)
 
                 if get_fusion_order:
-                    e_to_merge = self.fusion_network.es.find(name=ename_to_merge)
+                    e_to_merge = self.fusion_network.es.find(
+                        name=ename_to_merge)
                     v1, v2 = e_to_merge.source_vertex, e_to_merge.target_vertex
-                    fusion_order_curr_step.add((v1['name'], v2['name'], ename_to_merge))
+                    fusion_order_curr_step.add((v1['name'], v2['name'],
+                                                ename_to_merge))
 
-                enames_updated_weight = self.contract_edge(network, ename_to_merge)
+                enames_updated_weight = self._contract_edge(network,
+                                                            ename_to_merge)
 
                 recalculated_enames.extend(enames_updated_weight)
 
@@ -827,174 +921,17 @@ class OptGraphState:
             'overhead': overhead,
             'step': step,
             'fusion_order_strategy': strategy,
-            'p_succ': p_succ
-        }
+            'p_succ': p_succ}
 
         if get_fusion_order:
             results['fusion_order'] = fusion_order
 
         self.data.update(results)
 
-        # print(t_converting, '\n', t_matching, '\n', t_postprocess)
-
-        return self.data
-
-    # def _calculate_overhead_gt(self,
-    #                            p_succ=0.5,
-    #                            strategy='overhead_and_matching',
-    #                            get_fusion_order=False,
-    #                            ):
-    #     network = self.fusion_network.to_graph_tool(vertex_attributes={'name': 'string'},
-    #                                                 edge_attributes={'name': 'string'})
-    #     network.vp['overhead'] = network.new_vp('double', val=1)
-    #     network.vp['step'] = network.new_vp('int', val=0)
-    #     network.ep['overhead'] = network.new_ep('double', val=2 / p_succ)
-    #
-    #     fusion_order = []
-    #
-    #     vids = network.vertex_index
-    #     vnames = network.vp['name']
-    #     enames = network.ep['name']
-    #     v_overheads = network.vp['overhead']
-    #     e_overheads = network.ep['overhead']
-    #     steps = network.vp['step']
-    #
-    #     network.set_fast_edge_removal()
-    #
-    #     # Iterate until no edges remain in the fusion network
-    #     while True:
-    #         if not network.num_edges():
-    #             break
-    #
-    #         # print("All edges:")
-    #         # for e in network.edges():
-    #         #     print(e, network.edge_index[e], e_overheads[e])
-    #
-    #         # Determine edges to merge parallelly in the current step
-    #         if strategy == 'overhead_and_matching':
-    #             overheads = e_overheads.fa
-    #             # print(f"overheads = {overheads}")
-    #             # print('num_edges =', network.num_edges())
-    #             # for e in network.edges():
-    #             #     print(e, network.edge_index[e], e_overheads[e])
-    #             # print(e_overheads.a)
-    #             # print(e_overheads.fa)
-    #             # print()
-    #             subnetwork = gt.GraphView(network, efilt=(overheads == overheads.min()))
-    #             subnetwork = subnetwork.copy()
-    #             subnetwork.purge_edges()
-    #         else:
-    #             subnetwork = network
-    #
-    #         # if network.num_edges() == 3:
-    #         #     return subnetwork
-    #
-    #         eprop_matching = gt.max_cardinality_matching(subnetwork, edges=True)
-    #         es_curr_step_subnetwork = gt.find_edge(subnetwork, eprop_matching, 1)
-    #         # es_curr_step = [gt.find_edge(network, network.edge_index, subnetwork.edge_index[e_sn])
-    #         #                 for e_sn in es_curr_step_subnetwork]
-    #         es_curr_step = []
-    #         for e_sn in es_curr_step_subnetwork:
-    #             eid = subnetwork.edge_index[e_sn]
-    #             e = gt.find_edge(network, network.edge_index, eid)[0]
-    #             es_curr_step.append(e)
-    #         #     vid1 = subnetwork.vertex_index[e_sn.source()]
-    #         #     vid2 = subnetwork.vertex_index[e_sn.target()]
-    #         #     es = network.edge(vid1, vid2, all_edges=True)
-    #         #     if len(es) == 1:
-    #         #         e = es[0]
-    #         #     else:
-    #         #         ename = subnetwork.ep['name'][e_sn]
-    #         #         for e_ in es:
-    #         #             if enames[e_] == ename:
-    #         #                 e = e_
-    #         #                 break
-    #         #     es_curr_step.append(e)
-    #
-    #         # print("Subnetwork edges:")
-    #         # for e in subnetwork.edges():
-    #         #     print(e, subnetwork.edge_index[e], e_overheads[e])
-    #         #
-    #         # print(f"eprop = {eprop_matching.a}")
-    #         #
-    #         # print("Selected edges:")
-    #         # for e in es_curr_step:
-    #         #     print(e, network.edge_index[e])
-    #         # print()
-    #         #
-    #         # time.sleep(1)
-    #
-    #         if get_fusion_order:
-    #             fusion_order_curr_step = set()
-    #             fusion_order.append(fusion_order_curr_step)
-    #
-    #         vs_to_remove = []
-    #         for e_to_merge in es_curr_step:
-    #             ename_to_merge = enames[e_to_merge]
-    #
-    #             v_merged, v_removed = e_to_merge.source(), e_to_merge.target()
-    #             assert v_merged != v_removed
-    #             deg_merged, deg_removed = network.get_out_degrees([v_merged, v_removed])
-    #             if deg_merged < deg_removed:
-    #                 v_merged, v_removed = v_removed, v_merged
-    #             vid_merged = vids[v_merged]
-    #             vid_removed = vids[v_removed]
-    #             vname_merged = vnames[v_merged]
-    #             vname_removed = vnames[v_removed]
-    #
-    #             vs_to_remove.append(v_removed)
-    #
-    #             if get_fusion_order:
-    #                 fusion_order_curr_step.add((vname_merged, vname_removed, ename_to_merge))
-    #
-    #             # Contract the edge
-    #             v_overheads[v_merged] = e_overheads[e_to_merge]
-    #             updated_step = max(steps[v_merged], steps[v_removed]) + 1
-    #             steps[v_merged] = updated_step
-    #             self.fusion_network.es.find(name=ename_to_merge)['step'] = updated_step
-    #
-    #             for e_to_remove in v_removed.out_edges():
-    #                 if e_to_remove != e_to_merge:
-    #                     v1, v2 = e_to_remove.source(), e_to_remove.target()
-    #                     vids_new_edge = [vid_merged if vid_ == vid_removed else vid_
-    #                                      for vid_ in [vids[v1], vids[v2]]]
-    #
-    #                     if vids_new_edge[0] == vids_new_edge[1]:
-    #                         v_vrt = network.add_vertex()
-    #                         new_edge = network.add_edge(v_merged, v_vrt)
-    #                         v_overheads[v_vrt] = 0
-    #                     else:
-    #                         new_edge = network.add_edge(min(vids_new_edge), max(vids_new_edge))
-    #
-    #                     enames[new_edge] = enames[e_to_remove]
-    #
-    #                 network.remove_edge(e_to_remove)
-    #
-    #             for e_to_update in v_merged.out_edges():
-    #                 v1, v2 = e_to_update.source(), e_to_update.target()
-    #                 e_overheads[e_to_update] = (v_overheads[v1] + v_overheads[v2]) / p_succ
-    #
-    #         network.remove_vertex(vs_to_remove)
-    #
-    #     overhead = float(v_overheads.a.sum())
-    #     step = int(steps.a.max())
-    #
-    #     results = {
-    #         'overhead': overhead,
-    #         'step': step,
-    #         'fusion_order_strategy': strategy,
-    #         'p_succ': p_succ
-    #     }
-    #
-    #     if get_fusion_order:
-    #         results['fusion_order'] = fusion_order
-    #
-    #     self.data.update(results)
-    #
-    #     return self.data
+        return self.data.copy()
 
     def simulate(self,
-                 n_samples=1,
+                 n_iter=1,
                  p_succ=0.5,
                  mp=False,
                  n_procs=None,
@@ -1007,8 +944,90 @@ class OptGraphState:
                  seed='keep',
                  verbose=False,
                  pbar=False,
-                 **kwargs
-                 ):
+                 **kwargs):
+        """
+        Execute the strategy for a fixed number of iterations and obtain the
+        best one only (by default).
+
+        Instance variables such as self.data, self.unraveled_graph,
+        and self.fusion_network are updated according to the result of the
+        best iteration.
+
+        Parameters
+        ----------
+        n_iter : int (default: 1)
+            Iteration number.
+
+        p_succ : float (default: 0.5)
+            Success probability of a fusion.
+
+        mp : bool (default: False)
+            Whether to use multiprocessing for the iterations. Package
+            'parmap' should be installed to use it.
+
+        n_procs : None or int (default: None | ignored if mp is False)
+            Maximal number of simultaneous processes for multiprocessing.
+            If it is None, the number of CPUs is used.
+
+        get_all_data : bool (default: False)
+            Whether to obtain the data (overheads, numbers of steps,
+            etc.) for all the iterations or only the best iteration.
+
+        get_all_graphs : bool (default: False)
+            Whether to obtain the unraveled graphs for all the iterations or
+            only the best iteration.
+
+        get_all_fusion_networks : bool (default: False)
+            Whether to obtain the fusion networks for all the iterations or
+            only the best iteration.
+
+        unravel : bool (default: True)
+            Whether to unravel the graph or not.
+
+        unravel_bcs_first : one of [True, False, 'random']
+        (default: 'random' | ignored if unravel is False)
+            If it is True, BCSs are unraveled first, then clqiues are
+            unraveled.
+            If it is False, cliques are unraveled first, then BCSs are
+            unraveled.
+            If it is 'random', the order is randomly chosen.
+
+        fusion_order_strategy
+        : str, one of ['weight', 'matching', 'weight_and_matching', 'random']
+        (default: 'weight_and_matching')
+            Strategy for determining the edge to contract in each step.
+            - 'weight': Contract a random one among the edges with the
+            smallest weight.
+            - 'matching': Contract an edge in a maximum matching.
+            - 'weight_and_matching': Contract an edge in a maximum matching
+            of the subgraph of the intermediate fusion network induced by
+            the edges with the smallest weight. Same as the
+            'min-weight-maximum-matching-first' method in the manuscript.
+            - 'random': Contract a random edge.
+
+        seed : 'keep' or None or or int (default: 'keep')
+            Random seed.
+            If it is 'keep', the seed is not reset.
+            If it is None or an integer, the current time or the given
+            number is used as a seed, respectively.
+
+        verbose : bool (default: False)
+            Whether to print logs.
+
+        pbar : bool (default: False | ignored if mp is False)
+            Whether to show a progress bar.
+
+        kwargs : dict
+            Additional keyword arguments for calculating overheads.
+            See the docstring of self.calculate_overhead.
+
+        Returns
+        -------
+        res : dict
+            Result of the iterations.
+            By default, only the information for the optimal iteration is
+            given.
+        """
 
         t0 = time.time()
 
@@ -1018,17 +1037,17 @@ class OptGraphState:
         if mp:
             if n_procs is None:
                 n_procs = os.cpu_count()
-            mp = mp and n_samples >= n_procs
+            mp = mp and n_iter >= n_procs
 
         if not mp:
             if verbose:
                 print("No multiprocessing.")
-                print(f"Calculating for n_samples = {n_samples}... ", end='')
+                print(f"Calculating for n_samples = {n_iter}... ", end='')
 
-            if n_samples == 1 and seed is not None and seed != 'keep':
+            if n_iter == 1 and seed is not None and seed != 'keep':
                 seeds_samples = [seed]
             else:
-                seeds_samples = np.random.randint(0, _max_seed(), size=n_samples)
+                seeds_samples = np.random.randint(0, _max_seed(), size=n_iter)
 
             overheads = [] if get_all_data else None
             steps = [] if get_all_data else None
@@ -1038,7 +1057,7 @@ class OptGraphState:
 
             best_sample = None
             lowest_overhead = None
-            for i_sample in range(n_samples):
+            for i_sample in range(n_iter):
                 seed_sample = seeds_samples[i_sample]
                 np.random.seed(seed_sample)
 
@@ -1087,21 +1106,14 @@ class OptGraphState:
                 if get_all_fusion_networks:
                     fusion_networks.append(self.fusion_network)
 
-            # res = best_ogs.data
-            # res['n_samples'] = n_samples
-            # res['unravel'] = unravel
-
             res = {
                 'best_overhead': best_ogs.data['overhead'],
                 'best_step': best_ogs.data['step'],
                 'best_seed': best_ogs.data['seed'],
-                # 'best_unraveled_graph': best_ogs.unraveled_graph,
-                # 'best_fusion_network': best_ogs.fusion_network,
-                'n_samples': n_samples,
+                'n_samples': n_iter,
                 'p_succ': p_succ,
                 'unravel': unravel,
-                'fusion_order_strategy': fusion_order_strategy,
-            }
+                'fusion_order_strategy': fusion_order_strategy, }
 
             if unravel:
                 res['unravel_bcs_first'] = best_ogs.data['unravel_bcs_first']
@@ -1126,7 +1138,8 @@ class OptGraphState:
 
             if verbose:
                 print(f"Use multiprocessing (n_procs = {n_procs})")
-                print(f"Calculating for n_samples = {n_samples}, n_procs = {n_procs}... ", end='')
+                print(f"Calculating for n_samples = {n_iter}, n_procs = "
+                      f"{n_procs}... ", end='')
 
             additional_keys = []
             if get_all_data:
@@ -1136,8 +1149,8 @@ class OptGraphState:
             if get_all_fusion_networks:
                 additional_keys.append('fusion_networks')
 
-            left = n_samples % n_procs
-            ns_samples = [n_samples // n_procs] * n_procs
+            left = n_iter % n_procs
+            ns_samples = [n_iter // n_procs] * n_procs
             for i in range(left):
                 ns_samples[i] += 1
 
@@ -1155,10 +1168,11 @@ class OptGraphState:
                                        fusion_order_strategy=fusion_order_strategy,
                                        pm_pbar=pbar,
                                        **kwargs)
-            best_overheads = [res_each['best_overhead'] for res_each in res_procs]
+            best_overheads = [res_each['best_overhead'] for res_each in
+                              res_procs]
             best_proc = np.argmin(best_overheads)
             res = res_procs[best_proc]
-            res['n_samples'] = n_samples
+            res['n_samples'] = n_iter
             best_ogs = res['best_ogs']
             del res['best_ogs']
 
@@ -1170,7 +1184,8 @@ class OptGraphState:
                 res[key] = list(itertools.chain(*vals))
 
         if verbose:
-            print(f"Done. Best: {res['best_overhead']:.2f} ({time.time() - t0:.2f} s)")
+            print(f"Done. Best: {res['best_overhead']:.2f} "
+                  f"({time.time() - t0:.2f} s)")
 
         self.unraveled_graph = best_ogs.unraveled_graph
         self.fusion_network = best_ogs.fusion_network
@@ -1181,9 +1196,9 @@ class OptGraphState:
         return res
 
     def simulate_adaptive(self,
-                          init_n_samples,
-                          p_succ=0.5,
+                          init_n_iter,
                           mul=2,
+                          p_succ=0.5,
                           mp=False,
                           n_procs=None,
                           get_all_data=False,
@@ -1195,8 +1210,45 @@ class OptGraphState:
                           seed='keep',
                           verbose=True,
                           pbar=True,
-                          **kwargs
-                          ):
+                          **kwargs):
+        """
+        Run the adaptive iteration method for the strategy and obtain the
+        best one only (by default).
+
+        The adaptive iteration method looks for the best iteration while
+        keeps increasing the iteration number until a certain condition
+        meets. In detail, denoting N iterations of the strategy as R(N),
+        R(init_n_samples) is first executed and q0 is obtained which is the
+        lowest resource overhead. Then, R(mul*init_n_samples) is executed
+        and q1 is obtained similarly. If q0 <= q1, q0 is returned. If
+        otherwise, R(mul**2*init_n_samples) is executed and q2 is obtained.
+        If q1 <= q2, q1 is returned. If otherwise, R(mul**3*init_n_samples)
+        is executed, and so on.
+
+        Parameters
+        ----------
+        init_n_iter : int
+            Iteration number of the initial stage of the adaptive iteration
+            method.
+
+        mul : int (default: 2)
+            Multiplicative factor of the iteration number.
+            The number of iterations is increased by this number for each
+            stage.
+
+        p_succ, mp, n_procs, get_all_data, get_all_graphs,
+        get_all_fusion_networks, unravel, unravel_bcs_first,
+        fusion_order_strategy, seed, verbose, pbar, kwargs
+            : See the docstring of self.simulate.
+
+        Returns
+        -------
+        res : dict
+            Result of the iterations.
+            By default, only the information for the optimal iteration is
+            given.
+        """
+
         if mp and n_procs is None:
             n_procs = os.cpu_count()
 
@@ -1218,15 +1270,16 @@ class OptGraphState:
                 print("No multiprocessing")
 
         n_samples_history = []
-        n_samples_now = init_n_samples
+        n_samples_now = init_n_iter
         res = None
         while True:
             if verbose:
-                print(f"Calculating for n_samples = {n_samples_now}... ", end='')
+                print(f"Calculating for n_samples = {n_samples_now}... ",
+                      end='')
             t0 = time.time()
 
             n_samples_history.append(n_samples_now)
-            res_now = self.simulate(n_samples=n_samples_now,
+            res_now = self.simulate(n_iter=n_samples_now,
                                     p_succ=p_succ,
                                     mp=mp,
                                     n_procs=n_procs,
@@ -1259,11 +1312,13 @@ class OptGraphState:
 
                 else:
                     if verbose:
-                        print(f"Done. Best: {res['best_overhead']:.2f} ({time.time() - t0:.2f} s)")
+                        print(f"Done. Best: {res['best_overhead']:.2f} ("
+                              f"{time.time() - t0:.2f} s)")
                     break
 
             if verbose:
-                print(f"Done. Best: {res['best_overhead']:.2f} ({time.time() - t0:.2f} s)")
+                print(f"Done. Best: {res['best_overhead']:.2f} "
+                      f"({time.time() - t0:.2f} s)")
 
         res['n_samples'] = sum(n_samples_history)
 
@@ -1278,9 +1333,65 @@ class OptGraphState:
 
         return res
 
-    def plot_graph(self,
-                   unraveled=False,
-                   **kwargs):
+    def plot_graph(self, unraveled=False, **kwargs):
+        """
+        Plot the original or unraveled graph.
+
+        If the unraveled graph is plotted, edges in the unraveled graph are
+        drawn as black solid lines while external fusions are drawn as red
+        dashed lines (by default).
+
+        Parameters
+        ----------
+        unraveled : bool (default: False)
+            Whether to plot the unraveled graph or the original graph.
+
+        ax : None or matplotlib.axes.Axes (default: None)
+            If given, the figure is plotted on the Axes object.
+
+        layout : str (default: 'auto')
+            Layout algorithm for plotting.
+            See https://python.igraph.org/en/stable/tutorial.html#layouts
+            -and-plotting
+
+        figsize : 2-tuple of float (default: (7, 7))
+            Size of the figure in inches.
+
+        show_vertex_name : bool (default: True)
+            Whether to show vertex names.
+
+        vertex_color_normal : str (default: 'white')
+            Color of vertices without Clifford operations.
+
+        vertex_color_clifford : str (default: 'orange')
+            Color of vertices with Clifford operations.
+
+        vertices_to_highlight : None or list of {str or int} (default: None)
+            Name of vertices to highlight.
+
+        vertex_color_highlight : str
+        (default: 'purple' | ignored if vertices_to_highlight is None)
+            Color of the highlighted vertices.
+
+        edge_color_normal : str (default: 'black')
+            Color of edges in the graph.
+
+        edge_color_fusion : str
+        (default: 'red' | ignored if unraveled is False)
+            Color of lines for external fusions.
+
+        edge_style_fusion : str (default: '--')
+            Style of lines for external fusions.
+
+        Any other keyword arguments in igraph.plot can be directly used.
+        See https://python.igraph.org/en/stable/tutorial.html#layouts-and
+        -plotting
+        If they are given, they override the above parameters.
+
+        Returns
+        -------
+        fig, ax : matplotlib Figure and Axes object.
+        """
 
         graph = self.unraveled_graph if unraveled else self.graph
         if graph is None:
@@ -1290,41 +1401,116 @@ class OptGraphState:
 
         return fig, ax
 
-    def plot_fusion_network(self,
-                            inter=False,
-                            **kwargs):
-        network = self.inter_fusion_network if inter else self.fusion_network
+    def plot_fusion_network(self, **kwargs):
+        """
+        Plot the fusion network.
+
+        Parameters
+        ----------
+        ax : None or matplotlib.axes.Axes (default: None)
+            If given, the figure is plotted on the Axes object.
+
+        layout : str (default: 'auto')
+            Layout algorithm for plotting.
+            See https://python.igraph.org/en/stable/tutorial.html#layouts
+            -and-plotting
+
+        figsize : 2-tuple of float (default: (7, 7))
+            Size of the figure in inches.
+
+        show_node_name : bool (default: True)
+            Whether to show node names.
+
+        node_color_normal : str (default: 'white')
+            Color of nodes without Clifford operations.
+
+        node_color_clifford : str (default: 'orange')
+            Color of nodes with Clifford operations.
+
+        show_link_name : bool (default: False)
+            Whether to show link names.
+
+        show_fusion_order : bool (default: True)
+            Whether to show fusion orders on links.
+            If both 'show_link_name' and 'show_fusion_order' are True,
+            it is shown as '{link name}-{fusion order}'
+
+        uniform_link_style : bool (default: False)
+            Whether to use uniform link colors/styles or not.
+            If it is False, links of different types (leaf-to-leaf,
+            root-to-leaf, root-to-root) are drawn in different colors and
+            linestyles. Specifically, root-to-leaf links are drawn as lines
+            with arrows.
+
+        link_color_ll : str
+        (default: 'black' | ignored if uniform_link_style is True)
+            Color of links of 'leaf-to-leaf' type.
+
+        link_color_rl : str
+        (default: 'blue' | ignored if uniform_link_style is True)
+            Color of links of 'root-to-leaf' type.
+
+        link_color_rr : str
+        (default: 'red' | ignored if uniform_link_style is True)
+            Color of links of 'root-to-root' type.
+
+        link_style_ll : str
+        (default: '-' | ignored if uniform_link_style is True)
+            Style of links of 'leaf-to-leaf' type.
+
+        link_style_rl : str
+        (default: '-' | ignored if uniform_link_style is True)
+            Style of links of 'root-to-leaf' type.
+
+        link_style_rr : str
+        (default: '--' | ignored if uniform_link_style is True)
+            Style of links of 'root-to-root' type.
+
+        Any other keyword arguments in igraph.plot can be directly used.
+        See https://python.igraph.org/en/stable/tutorial.html#layouts
+        -and-plotting
+        If they are given, they override the above parameters.
+
+        Returns
+        -------
+        fig, ax : matplotlib Figure and Axes object.
+        """
+
+        network = self.fusion_network
         if network is None:
-            if inter:
-                raise ValueError('No intermediate fusion network created.')
-            else:
-                raise ValueError('No fusion network created.')
+            raise ValueError('No fusion network created.')
 
         fig, ax = plot_fusion_network(network, **kwargs)
 
         return fig, ax
 
     def copy(self):
-        ogs = OptGraphState(graph=self.graph,
-                            unraveled_graph=self.unraveled_graph,
-                            fusion_network=self.fusion_network)
-        # ogs.inter_fusion_network = self.inter_fusion_network
-        ogs.unraveled_bcss = self.unraveled_bcss
-        ogs.unraveled_cliques = self.unraveled_cliques
-        ogs.data = self.data.copy()
+        """
+        Return a **shallow** copy of this instance.
+
+        Returns
+        -------
+        copy : OptGraphState
+            Copied instance of self.
+        """
+
+        copy = OptGraphState(graph=self.graph,
+                             unraveled_graph=self.unraveled_graph,
+                             fusion_network=self.fusion_network)
+
+        copy.unraveled_bcss = self.unraveled_bcss
+        copy.unraveled_cliques = self.unraveled_cliques
+        copy.data = self.data.copy()
         if self.graph_info is not None:
-            ogs.graph_info = self.graph_info.copy()
+            copy.graph_info = self.graph_info.copy()
 
-        return ogs
+        return copy
 
 
-def _simulate_single(n_samples,
-                     seed,
-                     graph,
-                     **kwargs):
+def _simulate_single(n_samples, seed, graph, **kwargs):
     # To ensure that different processes have different random seeds.
     ogs = OptGraphState(graph=graph)
-    res = ogs.simulate(n_samples=n_samples, seed=seed, **kwargs)
+    res = ogs.simulate(n_iter=n_samples, seed=seed, **kwargs)
     res['best_ogs'] = ogs
 
     return res

@@ -4,33 +4,38 @@ import numpy as np
 import igraph as ig
 
 
-def get_graph(edges):
+def get_graph_from_edges(edges):
+    """
+    Generate an igraph.Graph object from the list of edges.
+
+    Parameters
+    ----------
+    edges : List of 2-tuple of int
+        List of edges that form the graph, where each integer indicates a
+        vertex label.
+
+    Returns
+    -------
+    graph : igraph.Graph
+        Generated graph.
+
+    """
     return ig.Graph(edges=edges)
 
 
 def get_sample_graph(shape, *prms):
     """
     Generate a predefined graph with a given shape and parameters.
-    > 'complete': Full graph where prms is the number of vertices.
-    > 'star': Star graph where prms is the number of leaf vertices (total prms + 1 vertices).
-    > 'tree': Tree graph where all vertices at distance d from the root have prms[d] children.
-    > 'rhg': Raussendorf-Harrington-Goyal lattice where
-        - prms[0]: (int) size of the lattice along the x-axis in the unit of a cell,
-        - prms[1]: (bool) whether the boundaries perpendicular to the x-axis is primal or not,
-        - prms[2] (int) and prms[3] (bool) determine the size and boundaries for the y-axis,
-        - prms[4] (int) and prms[5] (bool) determine the size and boundaries for the z-axis.
 
-    Parameters
-    ----------
-    shape : string
-        Determine the shape of the graph. One of {'complete', 'star', 'tree', 'tree_regular', 'rhg'}.
-    prms : number or tuple of numbers
-        Parameters for generating the graph.
+    See the docstring of OptGraphState.__init__.
 
     Returns
     -------
     graph : igraph.Graph.
         Generated graph.
+
+    graph_info : dict
+        Information of the generated graph including its shape and parameters.
     """
     graph_info = {'shape': shape}
 
@@ -62,7 +67,8 @@ def get_sample_graph(shape, *prms):
             for parent in range(parents_start, parents_start + n_parents):
                 g.add_vertices(n_children)
                 vcount = g.vcount()
-                g.add_edges([(parent, child) for child in range(vcount - n_children, vcount)])
+                g.add_edges([(parent, child) for child in
+                             range(vcount - n_children, vcount)])
 
             parents_start += n_parents
             n_parents *= n_children
@@ -101,92 +107,30 @@ def get_sample_graph(shape, *prms):
     return g, graph_info
 
 
-def greedy_coloring(g: ig.Graph, vertex_selection_method='largest_first'):
-    vcount = g.vcount()
-    if not vcount:
-        return {}
-
-    if vertex_selection_method == 'largest_first':
-        vids_sorted = np.argsort(g.vs.degree())[::-1]
-    elif vertex_selection_method == 'random':
-        vids_sorted = np.arange(vcount)
-        np.random.shuffle(vids_sorted)
-    else:
-        raise ValueError
-
-    colors = np.full(vcount, np.nan, dtype='int32')
-    for vid in vids_sorted:
-        colors_ngh = colors[g.neighbors(vid)]
-        for color in itertools.count():
-            if color not in colors_ngh:
-                break
-        colors[vid] = color
-
-    return colors
-
-
-# Find all quadrangles (cycle with length 4) in the graph that do not share any edges.
-def find_separated_quadrangles(g: ig.Graph, get_name=False):
-    quads = []
-
-    # Edges that are gauranteed to be either contained in a quadrangle or not contained in any quadrangles.
-    edges_marked = set()
-
-    vids = np.arange(g.vcount())
-    np.random.shuffle(vids)
-
-    for vid in vids:
-        ngh_vids = g.neighbors(vid)
-        np.random.shuffle(ngh_vids)
-        for ngh_vid1, ngh_vid2 in itertools.combinations(ngh_vids, r=2):
-            if (vid, ngh_vid1) in edges_marked or (vid, ngh_vid2) in edges_marked:
-                continue
-
-            common_ngh_ngh_vids = set(g.neighbors(ngh_vid1)) & set(g.neighbors(ngh_vid2)) - {vid}
-            cond = lambda vid_: (ngh_vid1, vid_) not in edges_marked and (ngh_vid2, vid_) not in edges_marked
-            common_ngh_ngh_vids = [vid_ for vid_ in common_ngh_ngh_vids if cond(vid_)]
-
-            num_common_ngh_ngh_vs = len(common_ngh_ngh_vids)
-            if num_common_ngh_ngh_vs == 1:
-                ngh_ngh_vid = common_ngh_ngh_vids[0]
-            elif num_common_ngh_ngh_vs > 1:
-                ngh_ngh_vid = np.random.choice(common_ngh_ngh_vids)
-            else:
-                continue
-
-            edges_quadrangle = [(vid, ngh_vid1), (ngh_vid1, ngh_ngh_vid), (ngh_ngh_vid, ngh_vid2),
-                                (ngh_vid2, vid)]
-            edges_marked.update(edges_quadrangle + [t[::-1] for t in edges_quadrangle])
-
-            quad = (vid, ngh_vid1, ngh_ngh_vid, ngh_vid2)
-            if get_name:
-                quad = tuple([g.vs[vid]['name'] for vid in quad])
-            quads.append(quad)
-
-        for ngh_vid in ngh_vids:
-            edges_marked.update([(vid, ngh_vid), (ngh_vid, vid)])
-
-    return quads
-
-
-def find_all_nonoverlapping_bcs(g: ig.Graph, get_name=False):
+def find_nonoverlapping_bcs(g: ig.Graph, get_name=False):
     """
-    Find bipartitely-complete subgraphs that do not share any vertices.
+    Find a maximum set of bipartitely-complete subgraphs (BCSs) that do not
+    share any vertices.
+
+    A 'maximum' set means that it cannot be enlarged by adding another BCS.
+    The obtained set may vary each time the function is called since the
+    iterations of vertices are randomized by numpy.random.
 
     Parameters
     ----------
-    g : ig.Graph
-        Input graph
-    get_name : bool
-        Whether to get the names or indices of vertices
+    g : igraph.Graph
+        Traget graph.
+
+    get_name : bool (default: False)
+        Whether to get the names or indices of vertices.
 
     Return
     ------
-    bcss : List of list of lists of integers or strings.
-    List of bipartitely-complete subgraphs expressed as
-    [[[vertices in one part of the first bcs], [vertices in the other part of the first bcs]],
-      [vertices in one part of the second bcs], [vertices in the other part of the second bcs]],
-      ...]
+    bcss : List of 2-tuple of list of {int or str}
+        Each element corresponds to a BCS found and has the structure of
+        ([v1, v2, ...], [u1, u2, ...]), where v1, v2, ... are the
+        indices/names of the vertices in one part of the BCS and
+        u1, u2, ... are the indices/names of the vertices in another part.
     """
     bcss = []
 
@@ -208,7 +152,8 @@ def find_all_nonoverlapping_bcs(g: ig.Graph, get_name=False):
                 continue
 
             for ngh_vid2 in ngh_vids:
-                if ngh_vid1 >= ngh_vid2 or ngh_vid2 in vids_in_bcs or (vid, ngh_vid2) in edges_checked:
+                if ngh_vid1 >= ngh_vid2 or ngh_vid2 in vids_in_bcs or (
+                        vid, ngh_vid2) in edges_checked:
                     continue
 
                 part1 = set(g.neighbors(ngh_vid1)) & set(g.neighbors(ngh_vid2))
@@ -236,9 +181,9 @@ def find_all_nonoverlapping_bcs(g: ig.Graph, get_name=False):
                     continue
 
                 if get_name:
-                    bcss.append([g.vs[part1]['name'], g.vs[part2]['name']])
+                    bcss.append((g.vs[part1]['name'], g.vs[part2]['name']))
                 else:
-                    bcss.append([part1, part2])
+                    bcss.append((part1, part2))
 
                 vids_in_bcs.update(part1)
                 vids_in_bcs.update(part2)
@@ -249,66 +194,27 @@ def find_all_nonoverlapping_bcs(g: ig.Graph, get_name=False):
     return bcss
 
 
-# def find_complete_bipartite_subgraph(g: ig.Graph, get_name=False):
-#     """
-#     Find one complete bipartite subgraph.
-#
-#     Parameters
-#     ----------
-#     g : ig.Graph
-#         Input graph
-#     get_name : bool
-#         Whether to get the names or indices of vertices
-#
-#     Return
-#     ------
-#     part1, part2 : Lists of the names or indices of the vertices in the two parts respectively
-#     If no complete bipartite subgraphs are found, (None, None) is returned.
-#     """
-#
-#     # Edges that are gauranteed to be not contained in any bcs.
-#     edges_marked = set()
-#
-#     vids = np.arange(g.vcount())
-#     np.random.shuffle(vids)
-#
-#     for vid in vids:
-#         ngh_vids = g.neighbors(vid)
-#         np.random.shuffle(ngh_vids)
-#
-#         for ngh_vid1, ngh_vid2 in itertools.combinations(ngh_vids, r=2):
-#             if (vid, ngh_vid1) in edges_marked or (vid, ngh_vid2) in edges_marked:
-#                 continue
-#
-#             part1 = set(g.neighbors(ngh_vid1)) & set(g.neighbors(ngh_vid2)) - {vid}
-#             cond = lambda part1_vid: (ngh_vid1, part1_vid) not in edges_marked \
-#                                      and (ngh_vid2, part1_vid) not in edges_marked
-#             part1 = [part1_vid for part1_vid in part1 if cond(part1_vid)]
-#             part1.append(vid)
-#
-#             if len(part1) == 1:
-#                 continue
-#
-#             part1_neighbors = [set(g.neighbors(vid)) for vid in part1]
-#             part2 = set.intersection(*part1_neighbors) - {ngh_vid1, ngh_vid2}
-#             cond = lambda part2_vid: all([(part1_vid, part2_vid) not in edges_marked for part1_vid in part1])
-#             part2 = [part2_vid for part2_vid in part2 if cond(part2_vid)]
-#             part2.extend([ngh_vid1, ngh_vid2])
-#
-#             if get_name:
-#                 return g.vs[part1]['name'], g.vs[part2]['name']
-#             else:
-#                 return part1, part2
-#
-#         for ngh_vid in ngh_vids:
-#             edges_marked.update({(vid, ngh_vid), (ngh_vid, vid)})
-#
-#     return None, None
+def find_nonoverlapping_cliques(g: ig.Graph, get_name=False):
+    """
+    Find a maximum set of cliques that do not share any vertices.
 
+    A 'maximum' set means that it cannot be enlarged by adding another clique.
+    The obtained set may vary each time the function is called since the
+    iterations of vertices are randomized by numpy.random.
 
-# Find all cliques (fully-connected subgraphs) in the graph where any pair of them share at most one photon.
-# If multiple cliques share two or more photons, select randomly among the cliques with the largest size.
-def find_all_nonoverlapping_cliques(g: ig.Graph, get_name=False):
+    Parameters
+    ----------
+    g : igraph.Graph
+        Target graph.
+
+    get_name : bool (default: False)
+        Whether to get the names or indices of vertices.
+
+    Returns
+    -------
+    cliques : list of set of {int or str}
+        Each element is the set of the indices/names of vertices in a clique.
+    """
     cliques = g.maximal_cliques(min=3)
     cliques = [set(clique) for clique in cliques]
     # num_cliques = len(cliques)
@@ -361,7 +267,9 @@ def _get_ptqc_graph(n, m, hic, center):
             vids_1_all = range(vid_start, vid_start + m)
 
             if n > 1:
-                vids_not1_1 = range(vid_start + m, vid_start + (n - 1) * m + 1, m)
+                vids_not1_1 = range(vid_start + m,
+                                    vid_start + (n - 1) * m + 1,
+                                    m)
                 _connect_vertex_sets(graph, vids_1_all, vids_not1_1)
 
                 if m > 1:
@@ -374,12 +282,15 @@ def _get_ptqc_graph(n, m, hic, center):
             return vids_1_all
 
     if hic:
-        inbetween_edge_each_block = [True, True] if center else [True, False, False]
+        inbetween_edge_each_block = [True, True] if center else [True, False,
+                                                                 False]
 
     else:
-        inbetween_edge_each_block = [False, False] if center else [True, True, False]
+        inbetween_edge_each_block = [False, False] if center else [True, True,
+                                                                   False]
 
-    vids_lqs = [build_logical_qubit(lq, inbetween_edge_each_block[lq]) for lq in range(2 if center else 3)]
+    vids_lqs = [build_logical_qubit(lq, inbetween_edge_each_block[lq]) for lq
+                in range(2 if center else 3)]
 
     if center:
         _connect_vertex_sets(graph, [0], itertools.chain(*vids_lqs))
@@ -403,9 +314,11 @@ def _get_parity_encoded_graph(logical_graph: ig.Graph, n, m):
         first_vids_each_block = range(first_vid + m, first_vid + n * m, m)
         _connect_vertex_sets(g, vids_first_block, first_vids_each_block)
 
-        # For each block besides the first one, the first vertex is connected with the other vertices.
+        # For each block besides the first one, the first vertex is
+        # connected with the other vertices.
         for first_vid_each_block in range(first_vid + m, first_vid + n * m, m):
-            other_vids = range(first_vid_each_block + 1, first_vid_each_block + m)
+            other_vids = range(first_vid_each_block + 1,
+                               first_vid_each_block + m)
             _connect_vertex_sets(g, [first_vid_each_block], other_vids)
 
         # The first vertex of each block has the Hadamard gate.
@@ -414,7 +327,9 @@ def _get_parity_encoded_graph(logical_graph: ig.Graph, n, m):
     # Connection between logical qubits
     for logical_edge in logical_graph.es:
         logical_vids = logical_edge.source, logical_edge.target
-        vids_first_blocks = [range(logical_vid * n * m, logical_vid * n * m + m) for logical_vid in logical_vids]
+        vids_first_blocks = [
+            range(logical_vid * n * m, logical_vid * n * m + m) for logical_vid
+            in logical_vids]
         _connect_vertex_sets(g, *vids_first_blocks)
 
     return g
@@ -434,9 +349,11 @@ def _get_rhg_lattice(Lx, Ly, Lz):
 
     def duality_condition(x, y, z, primal):
         if primal:
-            return not (x + y + z) % 2 and (x % 2 or y % 2 or z % 2)  # one even, two odds
+            return not (x + y + z) % 2 and (
+                    x % 2 or y % 2 or z % 2)  # one even, two odds
         else:
-            return (x + y + z) % 2 and not (x % 2 and y % 2 and z % 2)  # two evens, one odd
+            return (x + y + z) % 2 and not (
+                    x % 2 and y % 2 and z % 2)  # two evens, one odd
 
     def add_qubit(x, y, z, primal):
         vertex = g.add_vertex(x=x, y=y, z=z, primal=primal)
@@ -456,9 +373,9 @@ def _get_rhg_lattice(Lx, Ly, Lz):
     # Add edges
     get_vertex_by_coords = lambda x, y, z: g.vs.find(x=x, y=y, z=z)
     for vertex in primal_qubits:
-        edges = [(vertex, get_vertex_by_coords(*adj_coords))
-                 for adj_coords in _adjacent_coords(vertex["x"], vertex["y"], vertex["z"])
-                 if duality_condition(*adj_coords, False)]
+        edges = [(vertex, get_vertex_by_coords(*adj_coords)) for adj_coords in
+                 _adjacent_coords(vertex["x"], vertex["y"], vertex["z"]) if
+                 duality_condition(*adj_coords, False)]
         g.add_edges(edges)
 
     return g
