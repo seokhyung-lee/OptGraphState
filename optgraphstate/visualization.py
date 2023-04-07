@@ -139,7 +139,7 @@ def plot_fusion_network(network,
     network : igraph.Graph
         Fusion network to plot.
 
-    See the docstring of OptGraphState.plot_fusion_network for the other
+    See the docstring of GraphState.plot_fusion_network for the other
     parameters.
 
     Returns
@@ -174,7 +174,7 @@ def plot_fusion_network(network,
             if edge['kind'] == 'RL':
                 root_node = edge['root_node']
                 e_to_delete = (vname1, vname2) if root_node == vname2 else (
-                vname2, vname1)
+                    vname2, vname1)
             else:
                 e_to_delete = (vname2, vname1)
             es_to_delete.append(e_to_delete)

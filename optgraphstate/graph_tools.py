@@ -1,4 +1,5 @@
 import itertools
+import random
 
 import numpy as np
 import igraph as ig
@@ -27,7 +28,7 @@ def get_sample_graph(shape, *prms):
     """
     Generate a predefined graph with a given shape and parameters.
 
-    See the docstring of OptGraphState.__init__.
+    See the docstring of GraphState.__init__.
 
     Returns
     -------
@@ -40,12 +41,17 @@ def get_sample_graph(shape, *prms):
     graph_info = {'shape': shape}
 
     if shape == 'random':
+        assert len(prms) in [2, 3]
+        if len(prms) == 3:
+            random.seed(prms[2])
         g = ig.Graph.Erdos_Renyi(n=prms[0], m=prms[1])
 
     elif shape == 'complete':
+        assert len(prms) == 1
         g = ig.Graph.Full(n=prms[0])
 
     elif shape == 'star':
+        assert len(prms) == 1
         g = ig.Graph.Star(prms[0])
 
     elif shape == 'linear':
@@ -74,10 +80,12 @@ def get_sample_graph(shape, *prms):
             n_parents *= n_children
 
     elif shape == 'rhg':
+        assert len(prms) == 3
         graph_info['size'] = tuple(prms)
         g = _get_rhg_lattice(*prms)
 
     elif shape == 'repeater':
+        assert len(prms) == 1
         graph_info['m'] = prms[0]
         g, _ = get_sample_graph('complete', 2 * prms[0])
         vcount = g.vcount()
@@ -86,12 +94,14 @@ def get_sample_graph(shape, *prms):
             g.add_edge(v, new_v)
 
     elif shape == 'parity_encoding':
+        assert len(prms) == 3
         graph_info['logical_graph'] = prms[0]
         graph_info['n'] = prms[1]
         graph_info['m'] = prms[2]
         g = _get_parity_encoded_graph(*prms)
 
     elif shape == 'ptqc':
+        assert len(prms) == 4
         graph_info['n'] = prms[0]
         graph_info['m'] = prms[1]
         graph_info['HIC'] = prms[2]

@@ -1,3 +1,3 @@
 from .optgraphstate import *
-from .plotting import *
+from .visualization import *
 from .graph_tools import *
