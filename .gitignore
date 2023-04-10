@@ -2,10 +2,4 @@
 /.ipynb_checkpoints/
 /Test.ipynb
 /html/
-/.idea/codeStyles/codeStyleConfig.xml
-/.idea/misc.xml
-/.idea/modules.xml
-/.idea/optgraphstate.iml
-/.idea/inspectionProfiles/profiles_settings.xml
-/.idea/inspectionProfiles/Project_Default.xml
-/.idea/vcs.xml
+/idea/
