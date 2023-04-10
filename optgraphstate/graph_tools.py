@@ -7,17 +7,17 @@ import igraph as ig
 
 def get_graph_from_edges(edges):
     """
-    Generate an igraph.Graph object from the list of edges.
+    Generate an `igraph.Graph` object from the list of edges.
 
     Parameters
     ----------
-    edges : List of 2-tuple of int
+    edges : list of 2-tuple of int
         List of edges that form the graph, where each integer indicates a
         vertex label.
 
     Returns
     -------
-    graph : igraph.Graph
+    graph : `igraph.Graph`
         Generated graph.
 
     """
@@ -28,11 +28,11 @@ def get_sample_graph(shape, *prms):
     """
     Generate a predefined graph with a given shape and parameters.
 
-    See the docstring of GraphState.__init__.
+    See the description of `optgraphstate.GraphState.__init__()`.
 
     Returns
     -------
-    graph : igraph.Graph.
+    graph : igraph.Graph
         Generated graph.
 
     graph_info : dict
@@ -122,9 +122,9 @@ def find_nonoverlapping_bcs(g: ig.Graph, get_name=False):
     Find a maximum set of bipartitely-complete subgraphs (BCSs) that do not
     share any vertices.
 
-    A 'maximum' set means that it cannot be enlarged by adding another BCS.
+    A *maximum* set means that it cannot be enlarged by adding another BCS.
     The obtained set may vary each time the function is called since the
-    iterations of vertices are randomized by numpy.random.
+    iterations of vertices are randomized by `numpy.random`.
 
     Parameters
     ----------
@@ -134,9 +134,9 @@ def find_nonoverlapping_bcs(g: ig.Graph, get_name=False):
     get_name : bool (default: False)
         Whether to get the names or indices of vertices.
 
-    Return
-    ------
-    bcss : List of 2-tuple of list of {int or str}
+    Returns
+    -------
+    bcss : list of 2-tuple of list of {int or str}
         Each element corresponds to a BCS found and has the structure of
         ([v1, v2, ...], [u1, u2, ...]), where v1, v2, ... are the
         indices/names of the vertices in one part of the BCS and
@@ -208,9 +208,9 @@ def find_nonoverlapping_cliques(g: ig.Graph, get_name=False):
     """
     Find a maximum set of cliques that do not share any vertices.
 
-    A 'maximum' set means that it cannot be enlarged by adding another clique.
+    A *maximum* set means that it cannot be enlarged by adding another clique.
     The obtained set may vary each time the function is called since the
-    iterations of vertices are randomized by numpy.random.
+    iterations of vertices are randomized by `numpy.random`.
 
     Parameters
     ----------
@@ -243,6 +243,132 @@ def find_nonoverlapping_cliques(g: ig.Graph, get_name=False):
         cliques = [{g.vs[vid]['name'] for vid in clique} for clique in cliques]
 
     return cliques
+
+
+def get_all_vertices(graph):
+    """
+    Get all the vertex names of a graph.
+
+    Parameters
+    ----------
+    graph : igraph.Graph
+        Target graph.
+
+    Returns
+    -------
+    vertices : list of str
+        List of the names of the vertices in `graph`.
+    """
+
+    return graph.vs['name']
+
+
+def get_adjacency(graph):
+    """
+    Get the adjacency matrix of a graph.
+
+    Parameters
+    ----------
+    graph : igraph.Graph
+        Target graph.
+
+    Returns
+    -------
+    adjacency : numpy.ndarray
+        Adjacency matrix of `graph`.
+    """
+    adj = graph.get_adjacency()
+    return np.array(list(adj))
+
+
+def get_vertex_attrs(graph, vertex):
+    """
+    Get the attributes of a vertex of a graph.
+
+    Parameters
+    ----------
+    graph : igraph.Graph
+        Graph that the vertex belongs to.
+
+    vertex : str or int
+        Name of the vertex.
+
+    Returns
+    -------
+    attributes : dict
+        Attributes of the vertex.
+    """
+    vertex = str(vertex)
+    attrs = graph.vs.find(name=vertex).attributes()
+
+    return attrs
+
+
+def get_neighbors(graph, vertex):
+    """
+    Get the neighbors of a vertex in a graph.
+
+    Parameters
+    ----------
+    graph: igraph.Graph
+        Graph that the vertex belongs to.
+
+    vertex: str or int
+        Name of the vertex.
+
+    Returns
+    -------
+    neighbors: list of str
+        List of the names of the neighbors of the vertex.
+    """
+
+    vertex = str(vertex)
+
+    return graph.vs[graph.neighbors(str(vertex))]['name']
+
+
+def get_all_edges(graph):
+    """
+    Get all the edges of a graph in terms of pairs of vertex names.
+
+    Parameters
+    ----------
+    graph : igraph.Graph.
+        Target graph.
+
+    Returns
+    -------
+    edges : list of 2-tuple of str
+        List of the connected pairs of vertex names.
+    """
+
+    edges = []
+    for e in graph.es:
+        edges.append((e.source_vertex['name'], e.target_vertex['name']))
+    return edges
+
+
+def get_edge_attrs(graph, v1, v2):
+    """
+    Get the attributes of an edge in a graph.
+
+    Parameters
+    ----------
+    graph : igraph.Graph.
+        Graph that the edge belongs to.
+    v1, v2 : str or int
+        Names of the vertices connected by the edge.
+
+    Returns
+    -------
+    attributes : dict
+        Dictionary that contains the attributes of the edge.
+    """
+    n1 = str(v1)
+    n2 = str(v2)
+
+    link_attrs = graph.es[graph.get_eid(v1, v2)].attributes()
+    return link_attrs
 
 
 def _connect_vertex_sets(graph, inds1, inds2, **attrs):

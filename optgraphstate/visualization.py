@@ -38,9 +38,9 @@ def plot_graph(graph,
     Parameters
     ----------
     graph : igraph.Graph
-        Graph or unraveled graph to plot
+        Graph or unraveled graph to plot.
 
-    See the docstring of OptGraphState.plot_graph for the other parameters.
+    See the description of `optgraphstate.GraphState.plot_graph()` for the other parameters.
 
     Returns
     -------
@@ -139,7 +139,7 @@ def plot_fusion_network(network,
     network : igraph.Graph
         Fusion network to plot.
 
-    See the docstring of GraphState.plot_fusion_network for the other
+    See the description of `optgraphstate.GraphState.plot_fusion_network()` for the other
     parameters.
 
     Returns
