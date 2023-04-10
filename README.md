@@ -1,6 +1,6 @@
 # OptGraphState
 
-*Graph-theoretical optimization of fusion-based graph state generation*
+*Graph-theoretical optimization of fusion-based graph state generation.*
 
 **OptGraphState** is a python package that implements the graph-theoretical
 strategy to optimize the fusion-based generation of any graph state.
