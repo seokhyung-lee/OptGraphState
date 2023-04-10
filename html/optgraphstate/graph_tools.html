@@ -1,0 +1,1165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>optgraphstate.graph_tools API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>optgraphstate.graph_tools</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import itertools
+import random
+
+import numpy as np
+import igraph as ig
+
+
+def get_graph_from_edges(edges):
+    &#34;&#34;&#34;
+    Generate an `igraph.Graph` object from the list of edges.
+
+    Parameters
+    ----------
+    edges : list of 2-tuple of int
+        List of edges that form the graph, where each integer indicates a
+        vertex label.
+
+    Returns
+    -------
+    graph : `igraph.Graph`
+        Generated graph.
+
+    &#34;&#34;&#34;
+    return ig.Graph(edges=edges)
+
+
+def get_sample_graph(shape, *prms):
+    &#34;&#34;&#34;
+    Generate a predefined graph with a given shape and parameters.
+
+    See the description of `optgraphstate.GraphState.__init__()`.
+
+    Returns
+    -------
+    graph : igraph.Graph
+        Generated graph.
+
+    graph_info : dict
+        Information of the generated graph including its shape and parameters.
+    &#34;&#34;&#34;
+    graph_info = {&#39;shape&#39;: shape}
+
+    if shape == &#39;random&#39;:
+        assert len(prms) in [2, 3]
+        if len(prms) == 3:
+            random.seed(prms[2])
+        g = ig.Graph.Erdos_Renyi(n=prms[0], m=prms[1])
+
+    elif shape == &#39;complete&#39;:
+        assert len(prms) == 1
+        g = ig.Graph.Full(n=prms[0])
+
+    elif shape == &#39;star&#39;:
+        assert len(prms) == 1
+        g = ig.Graph.Star(prms[0])
+
+    elif shape == &#39;linear&#39;:
+        g = ig.Graph.Lattice(dim=prms, circular=False)
+
+    elif shape == &#39;cycle&#39;:
+        g = ig.Graph.Ring(prms[0])
+
+    elif shape == &#39;lattice&#39;:
+        g = ig.Graph.Lattice(dim=prms, circular=False)
+        graph_info[&#39;size&#39;] = tuple(prms)
+
+    elif shape == &#39;tree&#39;:
+        graph_info[&#39;num_children&#39;] = tuple(prms)
+        g: ig.Graph = ig.Graph.Star(prms[0] + 1)
+        parents_start = 1
+        n_parents = prms[0]
+        for n_children in prms[1:]:
+            for parent in range(parents_start, parents_start + n_parents):
+                g.add_vertices(n_children)
+                vcount = g.vcount()
+                g.add_edges([(parent, child) for child in
+                             range(vcount - n_children, vcount)])
+
+            parents_start += n_parents
+            n_parents *= n_children
+
+    elif shape == &#39;rhg&#39;:
+        assert len(prms) == 3
+        graph_info[&#39;size&#39;] = tuple(prms)
+        g = _get_rhg_lattice(*prms)
+
+    elif shape == &#39;repeater&#39;:
+        assert len(prms) == 1
+        graph_info[&#39;m&#39;] = prms[0]
+        g, _ = get_sample_graph(&#39;complete&#39;, 2 * prms[0])
+        vcount = g.vcount()
+        for v in range(vcount):
+            new_v = g.add_vertex()
+            g.add_edge(v, new_v)
+
+    elif shape == &#39;parity_encoding&#39;:
+        assert len(prms) == 3
+        graph_info[&#39;logical_graph&#39;] = prms[0]
+        graph_info[&#39;n&#39;] = prms[1]
+        graph_info[&#39;m&#39;] = prms[2]
+        g = _get_parity_encoded_graph(*prms)
+
+    elif shape == &#39;ptqc&#39;:
+        assert len(prms) == 4
+        graph_info[&#39;n&#39;] = prms[0]
+        graph_info[&#39;m&#39;] = prms[1]
+        graph_info[&#39;HIC&#39;] = prms[2]
+        graph_info[&#39;central&#39;] = prms[3]
+        g = _get_ptqc_graph(*prms)
+
+    else:
+        raise ValueError(&#34;Unsupported shape&#34;)
+
+    graph_info[&#39;num_vertices&#39;] = g.vcount()
+    graph_info[&#39;num_edges&#39;] = g.ecount()
+
+    return g, graph_info
+
+
+def find_nonoverlapping_bcs(g: ig.Graph, get_name=False):
+    &#34;&#34;&#34;
+    Find a maximum set of bipartitely-complete subgraphs (BCSs) that do not
+    share any vertices.
+
+    A *maximum* set means that it cannot be enlarged by adding another BCS.
+    The obtained set may vary each time the function is called since the
+    iterations of vertices are randomized by `numpy.random`.
+
+    Parameters
+    ----------
+    g : igraph.Graph
+        Traget graph.
+
+    get_name : bool (default: False)
+        Whether to get the names or indices of vertices.
+
+    Returns
+    -------
+    bcss : list of 2-tuple of list of {int or str}
+        Each element corresponds to a BCS found and has the structure of
+        ([v1, v2, ...], [u1, u2, ...]), where v1, v2, ... are the
+        indices/names of the vertices in one part of the BCS and
+        u1, u2, ... are the indices/names of the vertices in another part.
+    &#34;&#34;&#34;
+    bcss = []
+
+    vids_in_bcs = set()  # Vertices that are already contained in a bcs
+    edges_checked = set()  # Edges that are not contained in any bcs
+
+    vids = np.arange(g.vcount())
+    np.random.shuffle(vids)
+
+    for vid in vids:
+        if vid in vids_in_bcs:
+            continue
+
+        ngh_vids = g.neighbors(vid)
+        np.random.shuffle(ngh_vids)
+
+        for ngh_vid1 in ngh_vids:
+            if ngh_vid1 in vids_in_bcs or (vid, ngh_vid1) in edges_checked:
+                continue
+
+            for ngh_vid2 in ngh_vids:
+                if ngh_vid1 &gt;= ngh_vid2 or ngh_vid2 in vids_in_bcs or (
+                        vid, ngh_vid2) in edges_checked:
+                    continue
+
+                part1 = set(g.neighbors(ngh_vid1)) &amp; set(g.neighbors(ngh_vid2))
+
+                if len(part1) == 1:
+                    continue
+
+                marked = False
+                for part1_vid in part1:
+                    if part1_vid in vids_in_bcs:
+                        marked = True
+                        break
+                if marked:
+                    continue
+
+                part1_neighbors = [set(g.neighbors(vid)) for vid in part1]
+                part2 = set.intersection(*part1_neighbors)
+
+                marked = False
+                for part2_vid in part2:
+                    if part2_vid in vids_in_bcs:
+                        marked = True
+                        break
+                if marked:
+                    continue
+
+                if get_name:
+                    bcss.append((g.vs[part1][&#39;name&#39;], g.vs[part2][&#39;name&#39;]))
+                else:
+                    bcss.append((part1, part2))
+
+                vids_in_bcs.update(part1)
+                vids_in_bcs.update(part2)
+
+        for ngh_vid in ngh_vids:
+            edges_checked.update({(vid, ngh_vid), (ngh_vid, vid)})
+
+    return bcss
+
+
+def find_nonoverlapping_cliques(g: ig.Graph, get_name=False):
+    &#34;&#34;&#34;
+    Find a maximum set of cliques that do not share any vertices.
+
+    A *maximum* set means that it cannot be enlarged by adding another clique.
+    The obtained set may vary each time the function is called since the
+    iterations of vertices are randomized by `numpy.random`.
+
+    Parameters
+    ----------
+    g : igraph.Graph
+        Target graph.
+
+    get_name : bool (default: False)
+        Whether to get the names or indices of vertices.
+
+    Returns
+    -------
+    cliques : list of set of {int or str}
+        Each element is the set of the indices/names of vertices in a clique.
+    &#34;&#34;&#34;
+    cliques = g.maximal_cliques(min=3)
+    cliques = [set(clique) for clique in cliques]
+    # num_cliques = len(cliques)
+
+    # Remove overlapping cliques
+    np.random.shuffle(cliques)
+    nonoverlapping_cliques = []
+    all_vids = set()
+    for clique in cliques:
+        if not (clique &amp; all_vids):
+            nonoverlapping_cliques.append(clique)
+            all_vids.update(clique)
+
+    cliques = nonoverlapping_cliques
+    if get_name:
+        cliques = [{g.vs[vid][&#39;name&#39;] for vid in clique} for clique in cliques]
+
+    return cliques
+
+
+def get_all_vertices(graph):
+    &#34;&#34;&#34;
+    Get all the vertex names of a graph.
+
+    Parameters
+    ----------
+    graph : igraph.Graph
+        Target graph.
+
+    Returns
+    -------
+    vertices : list of str
+        List of the names of the vertices in `graph`.
+    &#34;&#34;&#34;
+
+    return graph.vs[&#39;name&#39;]
+
+
+def get_adjacency(graph):
+    &#34;&#34;&#34;
+    Get the adjacency matrix of a graph.
+
+    Parameters
+    ----------
+    graph : igraph.Graph
+        Target graph.
+
+    Returns
+    -------
+    adjacency : numpy.ndarray
+        Adjacency matrix of `graph`.
+    &#34;&#34;&#34;
+    adj = graph.get_adjacency()
+    return np.array(list(adj))
+
+
+def get_vertex_attrs(graph, vertex):
+    &#34;&#34;&#34;
+    Get the attributes of a vertex of a graph.
+
+    Parameters
+    ----------
+    graph : igraph.Graph
+        Graph that the vertex belongs to.
+
+    vertex : str or int
+        Name of the vertex.
+
+    Returns
+    -------
+    attributes : dict
+        Attributes of the vertex.
+    &#34;&#34;&#34;
+    vertex = str(vertex)
+    attrs = graph.vs.find(name=vertex).attributes()
+
+    return attrs
+
+
+def get_neighbors(graph, vertex):
+    &#34;&#34;&#34;
+    Get the neighbors of a vertex in a graph.
+
+    Parameters
+    ----------
+    graph: igraph.Graph
+        Graph that the vertex belongs to.
+
+    vertex: str or int
+        Name of the vertex.
+
+    Returns
+    -------
+    neighbors: list of str
+        List of the names of the neighbors of the vertex.
+    &#34;&#34;&#34;
+
+    vertex = str(vertex)
+
+    return graph.vs[graph.neighbors(str(vertex))][&#39;name&#39;]
+
+
+def get_all_edges(graph):
+    &#34;&#34;&#34;
+    Get all the edges of a graph in terms of pairs of vertex names.
+
+    Parameters
+    ----------
+    graph : igraph.Graph.
+        Target graph.
+
+    Returns
+    -------
+    edges : list of 2-tuple of str
+        List of the connected pairs of vertex names.
+    &#34;&#34;&#34;
+
+    edges = []
+    for e in graph.es:
+        edges.append((e.source_vertex[&#39;name&#39;], e.target_vertex[&#39;name&#39;]))
+    return edges
+
+
+def get_edge_attrs(graph, v1, v2):
+    &#34;&#34;&#34;
+    Get the attributes of an edge in a graph.
+
+    Parameters
+    ----------
+    graph : igraph.Graph.
+        Graph that the edge belongs to.
+    v1, v2 : str or int
+        Names of the vertices connected by the edge.
+
+    Returns
+    -------
+    attributes : dict
+        Dictionary that contains the attributes of the edge.
+    &#34;&#34;&#34;
+    n1 = str(v1)
+    n2 = str(v2)
+
+    link_attrs = graph.es[graph.get_eid(v1, v2)].attributes()
+    return link_attrs
+
+
+def _connect_vertex_sets(graph, inds1, inds2, **attrs):
+    if inds1 and inds2:
+        graph.add_edges(itertools.product(inds1, inds2), attributes=attrs)
+
+
+def _get_ptqc_graph(n, m, hic, center):
+    if center:
+        graph = ig.Graph(2 * n * m + 1, vertex_attrs={&#34;clifford&#34;: None})
+    else:
+        graph = ig.Graph(3 * n * m, vertex_attrs={&#34;clifford&#34;: None})
+
+    def build_logical_qubit(lq, inbetween_edge_each_block):
+        if center:
+            vid_start = 1 + lq * n * m
+        else:
+            vid_start = lq * n * m
+
+        if inbetween_edge_each_block:
+            vids_all_1 = range(vid_start, vid_start + (n - 1) * m + 1, m)
+            if m &gt; 1:
+                for vid_x_1 in vids_all_1:
+                    vids_x_not1 = range(vid_x_1 + 1, vid_x_1 + m)
+                    _connect_vertex_sets(graph, [vid_x_1], vids_x_not1)
+
+            graph.vs[vids_all_1][&#39;clifford&#39;] = &#39;H&#39;
+
+            return vids_all_1
+
+        else:
+            vids_1_all = range(vid_start, vid_start + m)
+
+            if n &gt; 1:
+                vids_not1_1 = range(vid_start + m,
+                                    vid_start + (n - 1) * m + 1,
+                                    m)
+                _connect_vertex_sets(graph, vids_1_all, vids_not1_1)
+
+                if m &gt; 1:
+                    for vid_x_1 in vids_not1_1:
+                        vids_x_not1 = range(vid_x_1 + 1, vid_x_1 + m)
+                        _connect_vertex_sets(graph, [vid_x_1], vids_x_not1)
+
+                graph.vs[vids_not1_1][&#39;clifford&#39;] = &#39;H&#39;
+
+            return vids_1_all
+
+    if hic:
+        inbetween_edge_each_block = [True, True] if center else [True, False,
+                                                                 False]
+
+    else:
+        inbetween_edge_each_block = [False, False] if center else [True, True,
+                                                                   False]
+
+    vids_lqs = [build_logical_qubit(lq, inbetween_edge_each_block[lq]) for lq
+                in range(2 if center else 3)]
+
+    if center:
+        _connect_vertex_sets(graph, [0], itertools.chain(*vids_lqs))
+
+    else:
+        _connect_vertex_sets(graph, vids_lqs[0], vids_lqs[1])
+        _connect_vertex_sets(graph, vids_lqs[1], vids_lqs[2])
+
+    return graph
+
+
+def _get_parity_encoded_graph(logical_graph: ig.Graph, n, m):
+    logical_vcount = logical_graph.vcount()
+    vcount = logical_vcount * n * m
+    g = ig.Graph(vcount, vertex_attrs={&#34;clifford&#34;: None})
+
+    # Internal structure of each logical qubit
+    for first_vid in range(0, vcount, n * m):
+        # The first block is connected with the first vertex of each block.
+        vids_first_block = range(first_vid, first_vid + m)
+        first_vids_each_block = range(first_vid + m, first_vid + n * m, m)
+        _connect_vertex_sets(g, vids_first_block, first_vids_each_block)
+
+        # For each block besides the first one, the first vertex is
+        # connected with the other vertices.
+        for first_vid_each_block in range(first_vid + m, first_vid + n * m, m):
+            other_vids = range(first_vid_each_block + 1,
+                               first_vid_each_block + m)
+            _connect_vertex_sets(g, [first_vid_each_block], other_vids)
+
+        # The first vertex of each block has the Hadamard gate.
+        g.vs[first_vids_each_block][&#39;clifford&#39;] = &#39;H&#39;
+
+    # Connection between logical qubits
+    for logical_edge in logical_graph.es:
+        logical_vids = logical_edge.source, logical_edge.target
+        vids_first_blocks = [
+            range(logical_vid * n * m, logical_vid * n * m + m) for logical_vid
+            in logical_vids]
+        _connect_vertex_sets(g, *vids_first_blocks)
+
+    return g
+
+
+def _get_rhg_lattice(Lx, Ly, Lz):
+    g = ig.Graph()
+    size = (2 * Lx, 2 * Ly, 2 * Lz)
+
+    def _adjacent_coords(*coords):
+        for axis, coord in enumerate(coords):
+            for diff in [1, -1]:
+                adjacent_vertex = list(coords[:])
+                adjacent_vertex[axis] += diff
+                if 0 &lt;= adjacent_vertex[axis] &lt;= size[axis]:
+                    yield tuple(adjacent_vertex)
+
+    def duality_condition(x, y, z, primal):
+        if primal:
+            return not (x + y + z) % 2 and (
+                    x % 2 or y % 2 or z % 2)  # one even, two odds
+        else:
+            return (x + y + z) % 2 and not (
+                    x % 2 and y % 2 and z % 2)  # two evens, one odd
+
+    def add_qubit(x, y, z, primal):
+        vertex = g.add_vertex(x=x, y=y, z=z, primal=primal)
+        return vertex
+
+    # Add vertices
+    primal_qubits = []
+    for x in range(size[0] + 1):
+        for y in range(size[1] + 1):
+            for z in range(size[2] + 1):
+                if duality_condition(x, y, z, True):
+                    new_qubit = add_qubit(x, y, z, True)
+                    primal_qubits.append(new_qubit)
+                elif duality_condition(x, y, z, False):
+                    add_qubit(x, y, z, False)
+
+    # Add edges
+    get_vertex_by_coords = lambda x, y, z: g.vs.find(x=x, y=y, z=z)
+    for vertex in primal_qubits:
+        edges = [(vertex, get_vertex_by_coords(*adj_coords)) for adj_coords in
+                 _adjacent_coords(vertex[&#34;x&#34;], vertex[&#34;y&#34;], vertex[&#34;z&#34;]) if
+                 duality_condition(*adj_coords, False)]
+        g.add_edges(edges)
+
+    return g</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="optgraphstate.graph_tools.find_nonoverlapping_bcs"><code class="name flex">
+<span>def <span class="ident">find_nonoverlapping_bcs</span></span>(<span>g: igraph.Graph, get_name=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Find a maximum set of bipartitely-complete subgraphs (BCSs) that do not
+share any vertices.</p>
+<p>A <em>maximum</em> set means that it cannot be enlarged by adding another BCS.
+The obtained set may vary each time the function is called since the
+iterations of vertices are randomized by <code>numpy.random</code>.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>g</code></strong> :&ensp;<code>igraph.Graph</code></dt>
+<dd>Traget graph.</dd>
+<dt><strong><code>get_name</code></strong> :&ensp;<code>bool (default: False)</code></dt>
+<dd>Whether to get the names or indices of vertices.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>bcss</code></strong> :&ensp;<code>list</code> of <code>2-tuple</code> of <code>list</code> of <code>{int</code> or <code>str}</code></dt>
+<dd>Each element corresponds to a BCS found and has the structure of
+([v1, v2, &hellip;], [u1, u2, &hellip;]), where v1, v2, &hellip; are the
+indices/names of the vertices in one part of the BCS and
+u1, u2, &hellip; are the indices/names of the vertices in another part.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def find_nonoverlapping_bcs(g: ig.Graph, get_name=False):
+    &#34;&#34;&#34;
+    Find a maximum set of bipartitely-complete subgraphs (BCSs) that do not
+    share any vertices.
+
+    A *maximum* set means that it cannot be enlarged by adding another BCS.
+    The obtained set may vary each time the function is called since the
+    iterations of vertices are randomized by `numpy.random`.
+
+    Parameters
+    ----------
+    g : igraph.Graph
+        Traget graph.
+
+    get_name : bool (default: False)
+        Whether to get the names or indices of vertices.
+
+    Returns
+    -------
+    bcss : list of 2-tuple of list of {int or str}
+        Each element corresponds to a BCS found and has the structure of
+        ([v1, v2, ...], [u1, u2, ...]), where v1, v2, ... are the
+        indices/names of the vertices in one part of the BCS and
+        u1, u2, ... are the indices/names of the vertices in another part.
+    &#34;&#34;&#34;
+    bcss = []
+
+    vids_in_bcs = set()  # Vertices that are already contained in a bcs
+    edges_checked = set()  # Edges that are not contained in any bcs
+
+    vids = np.arange(g.vcount())
+    np.random.shuffle(vids)
+
+    for vid in vids:
+        if vid in vids_in_bcs:
+            continue
+
+        ngh_vids = g.neighbors(vid)
+        np.random.shuffle(ngh_vids)
+
+        for ngh_vid1 in ngh_vids:
+            if ngh_vid1 in vids_in_bcs or (vid, ngh_vid1) in edges_checked:
+                continue
+
+            for ngh_vid2 in ngh_vids:
+                if ngh_vid1 &gt;= ngh_vid2 or ngh_vid2 in vids_in_bcs or (
+                        vid, ngh_vid2) in edges_checked:
+                    continue
+
+                part1 = set(g.neighbors(ngh_vid1)) &amp; set(g.neighbors(ngh_vid2))
+
+                if len(part1) == 1:
+                    continue
+
+                marked = False
+                for part1_vid in part1:
+                    if part1_vid in vids_in_bcs:
+                        marked = True
+                        break
+                if marked:
+                    continue
+
+                part1_neighbors = [set(g.neighbors(vid)) for vid in part1]
+                part2 = set.intersection(*part1_neighbors)
+
+                marked = False
+                for part2_vid in part2:
+                    if part2_vid in vids_in_bcs:
+                        marked = True
+                        break
+                if marked:
+                    continue
+
+                if get_name:
+                    bcss.append((g.vs[part1][&#39;name&#39;], g.vs[part2][&#39;name&#39;]))
+                else:
+                    bcss.append((part1, part2))
+
+                vids_in_bcs.update(part1)
+                vids_in_bcs.update(part2)
+
+        for ngh_vid in ngh_vids:
+            edges_checked.update({(vid, ngh_vid), (ngh_vid, vid)})
+
+    return bcss</code></pre>
+</details>
+</dd>
+<dt id="optgraphstate.graph_tools.find_nonoverlapping_cliques"><code class="name flex">
+<span>def <span class="ident">find_nonoverlapping_cliques</span></span>(<span>g: igraph.Graph, get_name=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Find a maximum set of cliques that do not share any vertices.</p>
+<p>A <em>maximum</em> set means that it cannot be enlarged by adding another clique.
+The obtained set may vary each time the function is called since the
+iterations of vertices are randomized by <code>numpy.random</code>.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>g</code></strong> :&ensp;<code>igraph.Graph</code></dt>
+<dd>Target graph.</dd>
+<dt><strong><code>get_name</code></strong> :&ensp;<code>bool (default: False)</code></dt>
+<dd>Whether to get the names or indices of vertices.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>cliques</code></strong> :&ensp;<code>list</code> of <code>set</code> of <code>{int</code> or <code>str}</code></dt>
+<dd>Each element is the set of the indices/names of vertices in a clique.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def find_nonoverlapping_cliques(g: ig.Graph, get_name=False):
+    &#34;&#34;&#34;
+    Find a maximum set of cliques that do not share any vertices.
+
+    A *maximum* set means that it cannot be enlarged by adding another clique.
+    The obtained set may vary each time the function is called since the
+    iterations of vertices are randomized by `numpy.random`.
+
+    Parameters
+    ----------
+    g : igraph.Graph
+        Target graph.
+
+    get_name : bool (default: False)
+        Whether to get the names or indices of vertices.
+
+    Returns
+    -------
+    cliques : list of set of {int or str}
+        Each element is the set of the indices/names of vertices in a clique.
+    &#34;&#34;&#34;
+    cliques = g.maximal_cliques(min=3)
+    cliques = [set(clique) for clique in cliques]
+    # num_cliques = len(cliques)
+
+    # Remove overlapping cliques
+    np.random.shuffle(cliques)
+    nonoverlapping_cliques = []
+    all_vids = set()
+    for clique in cliques:
+        if not (clique &amp; all_vids):
+            nonoverlapping_cliques.append(clique)
+            all_vids.update(clique)
+
+    cliques = nonoverlapping_cliques
+    if get_name:
+        cliques = [{g.vs[vid][&#39;name&#39;] for vid in clique} for clique in cliques]
+
+    return cliques</code></pre>
+</details>
+</dd>
+<dt id="optgraphstate.graph_tools.get_adjacency"><code class="name flex">
+<span>def <span class="ident">get_adjacency</span></span>(<span>graph)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the adjacency matrix of a graph.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>graph</code></strong> :&ensp;<code>igraph.Graph</code></dt>
+<dd>Target graph.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>adjacency</code></strong> :&ensp;<code>numpy.ndarray</code></dt>
+<dd>Adjacency matrix of <code>graph</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_adjacency(graph):
+    &#34;&#34;&#34;
+    Get the adjacency matrix of a graph.
+
+    Parameters
+    ----------
+    graph : igraph.Graph
+        Target graph.
+
+    Returns
+    -------
+    adjacency : numpy.ndarray
+        Adjacency matrix of `graph`.
+    &#34;&#34;&#34;
+    adj = graph.get_adjacency()
+    return np.array(list(adj))</code></pre>
+</details>
+</dd>
+<dt id="optgraphstate.graph_tools.get_all_edges"><code class="name flex">
+<span>def <span class="ident">get_all_edges</span></span>(<span>graph)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get all the edges of a graph in terms of pairs of vertex names.</p>
+<h2 id="parameters">Parameters</h2>
+<p>graph : igraph.Graph.
+Target graph.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>edges</code></strong> :&ensp;<code>list</code> of <code>2-tuple</code> of <code>str</code></dt>
+<dd>List of the connected pairs of vertex names.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_all_edges(graph):
+    &#34;&#34;&#34;
+    Get all the edges of a graph in terms of pairs of vertex names.
+
+    Parameters
+    ----------
+    graph : igraph.Graph.
+        Target graph.
+
+    Returns
+    -------
+    edges : list of 2-tuple of str
+        List of the connected pairs of vertex names.
+    &#34;&#34;&#34;
+
+    edges = []
+    for e in graph.es:
+        edges.append((e.source_vertex[&#39;name&#39;], e.target_vertex[&#39;name&#39;]))
+    return edges</code></pre>
+</details>
+</dd>
+<dt id="optgraphstate.graph_tools.get_all_vertices"><code class="name flex">
+<span>def <span class="ident">get_all_vertices</span></span>(<span>graph)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get all the vertex names of a graph.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>graph</code></strong> :&ensp;<code>igraph.Graph</code></dt>
+<dd>Target graph.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>vertices</code></strong> :&ensp;<code>list</code> of <code>str</code></dt>
+<dd>List of the names of the vertices in <code>graph</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_all_vertices(graph):
+    &#34;&#34;&#34;
+    Get all the vertex names of a graph.
+
+    Parameters
+    ----------
+    graph : igraph.Graph
+        Target graph.
+
+    Returns
+    -------
+    vertices : list of str
+        List of the names of the vertices in `graph`.
+    &#34;&#34;&#34;
+
+    return graph.vs[&#39;name&#39;]</code></pre>
+</details>
+</dd>
+<dt id="optgraphstate.graph_tools.get_edge_attrs"><code class="name flex">
+<span>def <span class="ident">get_edge_attrs</span></span>(<span>graph, v1, v2)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the attributes of an edge in a graph.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt>graph : igraph.Graph.</dt>
+<dt>Graph that the edge belongs to.</dt>
+<dt><strong><code>v1</code></strong>, <strong><code>v2</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
+<dd>Names of the vertices connected by the edge.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>attributes</code></strong> :&ensp;<code>dict</code></dt>
+<dd>Dictionary that contains the attributes of the edge.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_edge_attrs(graph, v1, v2):
+    &#34;&#34;&#34;
+    Get the attributes of an edge in a graph.
+
+    Parameters
+    ----------
+    graph : igraph.Graph.
+        Graph that the edge belongs to.
+    v1, v2 : str or int
+        Names of the vertices connected by the edge.
+
+    Returns
+    -------
+    attributes : dict
+        Dictionary that contains the attributes of the edge.
+    &#34;&#34;&#34;
+    n1 = str(v1)
+    n2 = str(v2)
+
+    link_attrs = graph.es[graph.get_eid(v1, v2)].attributes()
+    return link_attrs</code></pre>
+</details>
+</dd>
+<dt id="optgraphstate.graph_tools.get_graph_from_edges"><code class="name flex">
+<span>def <span class="ident">get_graph_from_edges</span></span>(<span>edges)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Generate an <code>igraph.Graph</code> object from the list of edges.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>edges</code></strong> :&ensp;<code>list</code> of <code>2-tuple</code> of <code>int</code></dt>
+<dd>List of edges that form the graph, where each integer indicates a
+vertex label.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>graph</code></strong> :&ensp;<code>igraph.Graph</code></dt>
+<dd>Generated graph.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_graph_from_edges(edges):
+    &#34;&#34;&#34;
+    Generate an `igraph.Graph` object from the list of edges.
+
+    Parameters
+    ----------
+    edges : list of 2-tuple of int
+        List of edges that form the graph, where each integer indicates a
+        vertex label.
+
+    Returns
+    -------
+    graph : `igraph.Graph`
+        Generated graph.
+
+    &#34;&#34;&#34;
+    return ig.Graph(edges=edges)</code></pre>
+</details>
+</dd>
+<dt id="optgraphstate.graph_tools.get_neighbors"><code class="name flex">
+<span>def <span class="ident">get_neighbors</span></span>(<span>graph, vertex)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the neighbors of a vertex in a graph.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>graph</code></strong> :&ensp;<code>igraph.Graph</code></dt>
+<dd>Graph that the vertex belongs to.</dd>
+<dt><strong><code>vertex</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
+<dd>Name of the vertex.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>neighbors</code></strong> :&ensp;<code>list</code> of <code>str</code></dt>
+<dd>List of the names of the neighbors of the vertex.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_neighbors(graph, vertex):
+    &#34;&#34;&#34;
+    Get the neighbors of a vertex in a graph.
+
+    Parameters
+    ----------
+    graph: igraph.Graph
+        Graph that the vertex belongs to.
+
+    vertex: str or int
+        Name of the vertex.
+
+    Returns
+    -------
+    neighbors: list of str
+        List of the names of the neighbors of the vertex.
+    &#34;&#34;&#34;
+
+    vertex = str(vertex)
+
+    return graph.vs[graph.neighbors(str(vertex))][&#39;name&#39;]</code></pre>
+</details>
+</dd>
+<dt id="optgraphstate.graph_tools.get_sample_graph"><code class="name flex">
+<span>def <span class="ident">get_sample_graph</span></span>(<span>shape, *prms)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Generate a predefined graph with a given shape and parameters.</p>
+<p>See the description of <code><a title="optgraphstate.GraphState" href="index.html#optgraphstate.GraphState">GraphState</a></code>.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>graph</code></strong> :&ensp;<code>igraph.Graph</code></dt>
+<dd>Generated graph.</dd>
+<dt><strong><code>graph_info</code></strong> :&ensp;<code>dict</code></dt>
+<dd>Information of the generated graph including its shape and parameters.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_sample_graph(shape, *prms):
+    &#34;&#34;&#34;
+    Generate a predefined graph with a given shape and parameters.
+
+    See the description of `optgraphstate.GraphState.__init__()`.
+
+    Returns
+    -------
+    graph : igraph.Graph
+        Generated graph.
+
+    graph_info : dict
+        Information of the generated graph including its shape and parameters.
+    &#34;&#34;&#34;
+    graph_info = {&#39;shape&#39;: shape}
+
+    if shape == &#39;random&#39;:
+        assert len(prms) in [2, 3]
+        if len(prms) == 3:
+            random.seed(prms[2])
+        g = ig.Graph.Erdos_Renyi(n=prms[0], m=prms[1])
+
+    elif shape == &#39;complete&#39;:
+        assert len(prms) == 1
+        g = ig.Graph.Full(n=prms[0])
+
+    elif shape == &#39;star&#39;:
+        assert len(prms) == 1
+        g = ig.Graph.Star(prms[0])
+
+    elif shape == &#39;linear&#39;:
+        g = ig.Graph.Lattice(dim=prms, circular=False)
+
+    elif shape == &#39;cycle&#39;:
+        g = ig.Graph.Ring(prms[0])
+
+    elif shape == &#39;lattice&#39;:
+        g = ig.Graph.Lattice(dim=prms, circular=False)
+        graph_info[&#39;size&#39;] = tuple(prms)
+
+    elif shape == &#39;tree&#39;:
+        graph_info[&#39;num_children&#39;] = tuple(prms)
+        g: ig.Graph = ig.Graph.Star(prms[0] + 1)
+        parents_start = 1
+        n_parents = prms[0]
+        for n_children in prms[1:]:
+            for parent in range(parents_start, parents_start + n_parents):
+                g.add_vertices(n_children)
+                vcount = g.vcount()
+                g.add_edges([(parent, child) for child in
+                             range(vcount - n_children, vcount)])
+
+            parents_start += n_parents
+            n_parents *= n_children
+
+    elif shape == &#39;rhg&#39;:
+        assert len(prms) == 3
+        graph_info[&#39;size&#39;] = tuple(prms)
+        g = _get_rhg_lattice(*prms)
+
+    elif shape == &#39;repeater&#39;:
+        assert len(prms) == 1
+        graph_info[&#39;m&#39;] = prms[0]
+        g, _ = get_sample_graph(&#39;complete&#39;, 2 * prms[0])
+        vcount = g.vcount()
+        for v in range(vcount):
+            new_v = g.add_vertex()
+            g.add_edge(v, new_v)
+
+    elif shape == &#39;parity_encoding&#39;:
+        assert len(prms) == 3
+        graph_info[&#39;logical_graph&#39;] = prms[0]
+        graph_info[&#39;n&#39;] = prms[1]
+        graph_info[&#39;m&#39;] = prms[2]
+        g = _get_parity_encoded_graph(*prms)
+
+    elif shape == &#39;ptqc&#39;:
+        assert len(prms) == 4
+        graph_info[&#39;n&#39;] = prms[0]
+        graph_info[&#39;m&#39;] = prms[1]
+        graph_info[&#39;HIC&#39;] = prms[2]
+        graph_info[&#39;central&#39;] = prms[3]
+        g = _get_ptqc_graph(*prms)
+
+    else:
+        raise ValueError(&#34;Unsupported shape&#34;)
+
+    graph_info[&#39;num_vertices&#39;] = g.vcount()
+    graph_info[&#39;num_edges&#39;] = g.ecount()
+
+    return g, graph_info</code></pre>
+</details>
+</dd>
+<dt id="optgraphstate.graph_tools.get_vertex_attrs"><code class="name flex">
+<span>def <span class="ident">get_vertex_attrs</span></span>(<span>graph, vertex)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the attributes of a vertex of a graph.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>graph</code></strong> :&ensp;<code>igraph.Graph</code></dt>
+<dd>Graph that the vertex belongs to.</dd>
+<dt><strong><code>vertex</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
+<dd>Name of the vertex.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>attributes</code></strong> :&ensp;<code>dict</code></dt>
+<dd>Attributes of the vertex.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_vertex_attrs(graph, vertex):
+    &#34;&#34;&#34;
+    Get the attributes of a vertex of a graph.
+
+    Parameters
+    ----------
+    graph : igraph.Graph
+        Graph that the vertex belongs to.
+
+    vertex : str or int
+        Name of the vertex.
+
+    Returns
+    -------
+    attributes : dict
+        Attributes of the vertex.
+    &#34;&#34;&#34;
+    vertex = str(vertex)
+    attrs = graph.vs.find(name=vertex).attributes()
+
+    return attrs</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="optgraphstate" href="index.html">optgraphstate</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="optgraphstate.graph_tools.find_nonoverlapping_bcs" href="#optgraphstate.graph_tools.find_nonoverlapping_bcs">find_nonoverlapping_bcs</a></code></li>
+<li><code><a title="optgraphstate.graph_tools.find_nonoverlapping_cliques" href="#optgraphstate.graph_tools.find_nonoverlapping_cliques">find_nonoverlapping_cliques</a></code></li>
+<li><code><a title="optgraphstate.graph_tools.get_adjacency" href="#optgraphstate.graph_tools.get_adjacency">get_adjacency</a></code></li>
+<li><code><a title="optgraphstate.graph_tools.get_all_edges" href="#optgraphstate.graph_tools.get_all_edges">get_all_edges</a></code></li>
+<li><code><a title="optgraphstate.graph_tools.get_all_vertices" href="#optgraphstate.graph_tools.get_all_vertices">get_all_vertices</a></code></li>
+<li><code><a title="optgraphstate.graph_tools.get_edge_attrs" href="#optgraphstate.graph_tools.get_edge_attrs">get_edge_attrs</a></code></li>
+<li><code><a title="optgraphstate.graph_tools.get_graph_from_edges" href="#optgraphstate.graph_tools.get_graph_from_edges">get_graph_from_edges</a></code></li>
+<li><code><a title="optgraphstate.graph_tools.get_neighbors" href="#optgraphstate.graph_tools.get_neighbors">get_neighbors</a></code></li>
+<li><code><a title="optgraphstate.graph_tools.get_sample_graph" href="#optgraphstate.graph_tools.get_sample_graph">get_sample_graph</a></code></li>
+<li><code><a title="optgraphstate.graph_tools.get_vertex_attrs" href="#optgraphstate.graph_tools.get_vertex_attrs">get_vertex_attrs</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>
