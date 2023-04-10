@@ -139,8 +139,8 @@ def plot_fusion_network(network,
     network : igraph.Graph
         Fusion network to plot.
 
-    See the description of `optgraphstate.GraphState.plot_fusion_network()` for the other
-    parameters.
+    See the description of `optgraphstate.GraphState.plot_fusion_network()`
+    for the other parameters.
 
     Returns
     -------

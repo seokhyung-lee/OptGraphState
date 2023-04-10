@@ -7,7 +7,7 @@ import igraph as ig
 
 def get_graph_from_edges(edges):
     """
-    Generate an `igraph.Graph` object from the list of edges.
+    Generate an [`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html) object from the list of edges.
 
     Parameters
     ----------
@@ -17,7 +17,7 @@ def get_graph_from_edges(edges):
 
     Returns
     -------
-    graph : `igraph.Graph`
+    graph : igraph.Graph
         Generated graph.
 
     """

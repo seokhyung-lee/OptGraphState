@@ -41,7 +41,7 @@ class GraphState:
         The graph of the concerned graph state can be given by the following
         three ways:
 
-        1. Given explicitly by `igraph.Graph` or `networkx.Graph`.
+        1. Given explicitly by [`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html) or [`networkx.Graph`](https://networkx.org/documentation/stable/reference/classes/graph.html).
         2. Given by a list of edges.
         3. Chosen among predefined graphs.
 
@@ -50,7 +50,7 @@ class GraphState:
         graph : None or igraph.Graph or networkx.Graph (default: None)
             Graph of the concerned graph.<br>
             If it is given, `edges`, `shape`, and `prms` are ignored. If it
-            is `networkx.Graph`, it is internally converted to `igraph.Graph`.
+            is [`networkx.Graph`](https://networkx.org/documentation/stable/reference/classes/graph.html), it is internally converted to [`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html).
 
         edges : None or list of 2-tuple of int (default: None)
             List of edges that form the concerned graph.<br>
@@ -88,7 +88,7 @@ class GraphState:
             - `shape='repeater'` : Repeater graph with 4m vertices.
                 - `prms[0]` <`int`> : Parameter m.
             - `shape='parity_encoding'` : (n, m) parity-encoded graph.
-                - `prms[0]` <`igraph.Graph`> : Logical-level graph. Can be
+                - `prms[0]` <[`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html)> : Logical-level graph. Can be
                 generated with python-igraph library directly or from the
                 function `get_graph_from_edges()` or `get_sample_graph`.
                 - `prms[1]`, `prms[2]` <`int`> : Parameters n and m of the
@@ -121,14 +121,14 @@ class GraphState:
         unraveled_graph : None or igraph.Graph or networkx.Graph (default: None)
             Pregiven unraveled graph.<br>
             The code does not check the validity of the given unraveled graph.
-            If it is `networkx.Graph`, it is internally converted to
-            `igraph.Graph`.
+            If it is [`networkx.Graph`](https://networkx.org/documentation/stable/reference/classes/graph.html), it is internally converted to
+            [`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html).
 
         fusion_network : None or igraph.Graph or networkx.Graph (default: None)
             Pregiven fusion network.<br>
             The code does not check the validity of the given fusion network.
-            If it is `networkx.Graph`, it is internally converted to
-            `igraph.Graph`.
+            If it is [`networkx.Graph`](https://networkx.org/documentation/stable/reference/classes/graph.html), it is internally converted to
+            [`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html).
         """
 
         def convert_type(g, varname):
@@ -200,7 +200,7 @@ class GraphState:
         Unravel bipartitely-complete subgraphs (BCSs) and cliques of the graph.
 
         The unraveled graph is saved in `self.unraveled_graph` as
-        `igraph.Graph`.
+        [`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html).
 
         Parameters
         ----------
@@ -261,7 +261,7 @@ class GraphState:
         Unravel bipartitely-complete subgraphs (BCSs) of the graph.
 
         The unraveled graph is saved in `GraphState.unraveled_graph` as
-        `igraph.Graph`.
+        [`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html).
 
         Parameters
         ----------
@@ -351,7 +351,7 @@ class GraphState:
         Unravel cliques of the graph.
 
         The unraveled graph is saved in `GraphState.unraveled_graph` as
-        `igraph.Graph`.
+        [`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html).
 
         Parameters
         ----------
@@ -478,7 +478,7 @@ class GraphState:
         Build a fusion network from the graph.
 
         The constructed fusion network is saved in `GraphState.fusion_network` as
-        `igraph.Graph`.
+        [`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html).
 
         Parameters
         ----------
