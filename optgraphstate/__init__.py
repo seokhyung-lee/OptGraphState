@@ -16,7 +16,9 @@ that instructs the fusions between basic resource states required to generate
 the desired graph state.
 - Various predefined sample graphs for input.
 
-Github link: https://github.com/seokhyung-lee/OptGraphState
+Github: https://github.com/seokhyung-lee/OptGraphState
+
+Tutorials: https://github.com/seokhyung-lee/OptGraphState/raw/main/tutorials.pdf
 """
 
 import time

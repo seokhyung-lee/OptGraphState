@@ -62,9 +62,6 @@ def get_sample_graph(shape, *prms):
     -------
     graph : igraph.Graph
         Generated graph.
-
-    graph_info : dict
-        Information of the generated graph including its shape and parameters.
     &#34;&#34;&#34;
     graph_info = {&#39;shape&#39;: shape}
 
@@ -73,6 +70,7 @@ def get_sample_graph(shape, *prms):
         if len(prms) == 3:
             random.seed(prms[2])
         g = ig.Graph.Erdos_Renyi(n=prms[0], m=prms[1])
+        random.seed()
 
     elif shape == &#39;complete&#39;:
         assert len(prms) == 1
@@ -90,10 +88,10 @@ def get_sample_graph(shape, *prms):
 
     elif shape == &#39;lattice&#39;:
         g = ig.Graph.Lattice(dim=prms, circular=False)
-        graph_info[&#39;size&#39;] = tuple(prms)
+        # graph_info[&#39;size&#39;] = tuple(prms)
 
     elif shape == &#39;tree&#39;:
-        graph_info[&#39;num_children&#39;] = tuple(prms)
+        # graph_info[&#39;num_children&#39;] = tuple(prms)
         g: ig.Graph = ig.Graph.Star(prms[0] + 1)
         parents_start = 1
         n_parents = prms[0]
@@ -109,43 +107,40 @@ def get_sample_graph(shape, *prms):
 
     elif shape == &#39;rhg&#39;:
         assert len(prms) == 3
-        graph_info[&#39;size&#39;] = tuple(prms)
         g = _get_rhg_lattice(*prms)
+        # g[&#39;size&#39;] = tuple(prms)
 
     elif shape == &#39;repeater&#39;:
         assert len(prms) == 1
-        graph_info[&#39;m&#39;] = prms[0]
         g, _ = get_sample_graph(&#39;complete&#39;, 2 * prms[0])
         vcount = g.vcount()
         for v in range(vcount):
             new_v = g.add_vertex()
             g.add_edge(v, new_v)
+        # g[&#39;m&#39;] = prms[0]
 
     elif shape == &#39;parity_encoding&#39;:
         assert len(prms) == 3
-        graph_info[&#39;logical_graph&#39;] = prms[0]
-        graph_info[&#39;n&#39;] = prms[1]
-        graph_info[&#39;m&#39;] = prms[2]
         g = _get_parity_encoded_graph(*prms)
+        # g[&#39;logical_graph&#39;] = prms[0]
+        # g[&#39;n&#39;] = prms[1]
+        # g[&#39;m&#39;] = prms[2]
 
     elif shape == &#39;ptqc&#39;:
         assert len(prms) == 4
-        graph_info[&#39;n&#39;] = prms[0]
-        graph_info[&#39;m&#39;] = prms[1]
-        graph_info[&#39;HIC&#39;] = prms[2]
-        graph_info[&#39;central&#39;] = prms[3]
         g = _get_ptqc_graph(*prms)
+        # g[&#39;n&#39;] = prms[0]
+        # g[&#39;m&#39;] = prms[1]
+        # g[&#39;HIC&#39;] = prms[2]
+        # g[&#39;central&#39;] = prms[3]
 
     else:
         raise ValueError(&#34;Unsupported shape&#34;)
 
-    graph_info[&#39;num_vertices&#39;] = g.vcount()
-    graph_info[&#39;num_edges&#39;] = g.ecount()
-
-    return g, graph_info
+    return g
 
 
-def find_nonoverlapping_bcs(g: ig.Graph, get_name=False):
+def find_nonoverlapping_bcss(g: ig.Graph, get_name=False):
     &#34;&#34;&#34;
     Find a maximum set of bipartitely-complete subgraphs (BCSs) that do not
     share any vertices.
@@ -273,130 +268,130 @@ def find_nonoverlapping_cliques(g: ig.Graph, get_name=False):
     return cliques
 
 
-def get_all_vertices(graph):
-    &#34;&#34;&#34;
-    Get all the vertex names of a graph.
-
-    Parameters
-    ----------
-    graph : igraph.Graph
-        Target graph.
-
-    Returns
-    -------
-    vertices : list of str
-        List of the names of the vertices in `graph`.
-    &#34;&#34;&#34;
-
-    return graph.vs[&#39;name&#39;]
-
-
-def get_adjacency(graph):
-    &#34;&#34;&#34;
-    Get the adjacency matrix of a graph.
-
-    Parameters
-    ----------
-    graph : igraph.Graph
-        Target graph.
-
-    Returns
-    -------
-    adjacency : numpy.ndarray
-        Adjacency matrix of `graph`.
-    &#34;&#34;&#34;
-    adj = graph.get_adjacency()
-    return np.array(list(adj))
-
-
-def get_vertex_attrs(graph, vertex):
-    &#34;&#34;&#34;
-    Get the attributes of a vertex of a graph.
-
-    Parameters
-    ----------
-    graph : igraph.Graph
-        Graph that the vertex belongs to.
-
-    vertex : str or int
-        Name of the vertex.
-
-    Returns
-    -------
-    attributes : dict
-        Attributes of the vertex.
-    &#34;&#34;&#34;
-    vertex = str(vertex)
-    attrs = graph.vs.find(name=vertex).attributes()
-
-    return attrs
-
-
-def get_neighbors(graph, vertex):
-    &#34;&#34;&#34;
-    Get the neighbors of a vertex in a graph.
-
-    Parameters
-    ----------
-    graph: igraph.Graph
-        Graph that the vertex belongs to.
-
-    vertex: str or int
-        Name of the vertex.
-
-    Returns
-    -------
-    neighbors: list of str
-        List of the names of the neighbors of the vertex.
-    &#34;&#34;&#34;
-
-    vertex = str(vertex)
-
-    return graph.vs[graph.neighbors(str(vertex))][&#39;name&#39;]
-
-
-def get_all_edges(graph):
-    &#34;&#34;&#34;
-    Get all the edges of a graph in terms of pairs of vertex names.
-
-    Parameters
-    ----------
-    graph : igraph.Graph.
-        Target graph.
-
-    Returns
-    -------
-    edges : list of 2-tuple of str
-        List of the connected pairs of vertex names.
-    &#34;&#34;&#34;
-
-    edges = []
-    for e in graph.es:
-        edges.append((e.source_vertex[&#39;name&#39;], e.target_vertex[&#39;name&#39;]))
-    return edges
-
-
-def get_edge_attrs(graph, v1, v2):
-    &#34;&#34;&#34;
-    Get the attributes of an edge in a graph.
-
-    Parameters
-    ----------
-    graph : igraph.Graph.
-        Graph that the edge belongs to.
-    v1, v2 : str or int
-        Names of the vertices connected by the edge.
-
-    Returns
-    -------
-    attributes : dict
-        Dictionary that contains the attributes of the edge.
-    &#34;&#34;&#34;
-    n1 = str(v1)
-    n2 = str(v2)
-
-    link_attrs = graph.es[graph.get_eid(v1, v2)].attributes()
-    return link_attrs
+# def get_all_vertices(graph):
+#     &#34;&#34;&#34;
+#     Get all the vertex names of a graph.
+#
+#     Parameters
+#     ----------
+#     graph : igraph.Graph
+#         Target graph.
+#
+#     Returns
+#     -------
+#     vertices : list of str
+#         List of the names of the vertices in `graph`.
+#     &#34;&#34;&#34;
+#
+#     return graph.vs[&#39;name&#39;]
+#
+#
+# def get_adjacency(graph):
+#     &#34;&#34;&#34;
+#     Get the adjacency matrix of a graph.
+#
+#     Parameters
+#     ----------
+#     graph : igraph.Graph
+#         Target graph.
+#
+#     Returns
+#     -------
+#     adjacency : numpy.ndarray
+#         Adjacency matrix of `graph`.
+#     &#34;&#34;&#34;
+#     adj = graph.get_adjacency()
+#     return np.array(list(adj))
+#
+#
+# def get_vertex_attrs(graph, vertex):
+#     &#34;&#34;&#34;
+#     Get the attributes of a vertex of a graph.
+#
+#     Parameters
+#     ----------
+#     graph : igraph.Graph
+#         Graph that the vertex belongs to.
+#
+#     vertex : str or int
+#         Name of the vertex.
+#
+#     Returns
+#     -------
+#     attributes : dict
+#         Attributes of the vertex.
+#     &#34;&#34;&#34;
+#     vertex = str(vertex)
+#     attrs = graph.vs.find(name=vertex).attributes()
+#
+#     return attrs
+#
+#
+# def get_neighbors(graph, vertex):
+#     &#34;&#34;&#34;
+#     Get the neighbors of a vertex in a graph.
+#
+#     Parameters
+#     ----------
+#     graph: igraph.Graph
+#         Graph that the vertex belongs to.
+#
+#     vertex: str or int
+#         Name of the vertex.
+#
+#     Returns
+#     -------
+#     neighbors: list of str
+#         List of the names of the neighbors of the vertex.
+#     &#34;&#34;&#34;
+#
+#     vertex = str(vertex)
+#
+#     return graph.vs[graph.neighbors(str(vertex))][&#39;name&#39;]
+#
+#
+# def get_all_edges(graph):
+#     &#34;&#34;&#34;
+#     Get all the edges of a graph in terms of pairs of vertex names.
+#
+#     Parameters
+#     ----------
+#     graph : igraph.Graph.
+#         Target graph.
+#
+#     Returns
+#     -------
+#     edges : list of 2-tuple of str
+#         List of the connected pairs of vertex names.
+#     &#34;&#34;&#34;
+#
+#     edges = []
+#     for e in graph.es:
+#         edges.append((e.source_vertex[&#39;name&#39;], e.target_vertex[&#39;name&#39;]))
+#     return edges
+#
+#
+# def get_edge_attrs(graph, v1, v2):
+#     &#34;&#34;&#34;
+#     Get the attributes of an edge in a graph.
+#
+#     Parameters
+#     ----------
+#     graph : igraph.Graph.
+#         Graph that the edge belongs to.
+#     v1, v2 : str or int
+#         Names of the vertices connected by the edge.
+#
+#     Returns
+#     -------
+#     attributes : dict
+#         Dictionary that contains the attributes of the edge.
+#     &#34;&#34;&#34;
+#     n1 = str(v1)
+#     n2 = str(v2)
+#
+#     link_attrs = graph.es[graph.get_eid(v1, v2)].attributes()
+#     return link_attrs
 
 
 def _connect_vertex_sets(graph, inds1, inds2, **attrs):
@@ -552,8 +547,8 @@ def _get_rhg_lattice(Lx, Ly, Lz):
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="optgraphstate.graph_tools.find_nonoverlapping_bcs"><code class="name flex">
-<span>def <span class="ident">find_nonoverlapping_bcs</span></span>(<span>g: igraph.Graph, get_name=False)</span>
+<dt id="optgraphstate.graph_tools.find_nonoverlapping_bcss"><code class="name flex">
+<span>def <span class="ident">find_nonoverlapping_bcss</span></span>(<span>g: igraph.Graph, get_name=False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Find a maximum set of bipartitely-complete subgraphs (BCSs) that do not
@@ -580,7 +575,7 @@ u1, u2, &hellip; are the indices/names of the vertices in another part.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def find_nonoverlapping_bcs(g: ig.Graph, get_name=False):
+<pre><code class="python">def find_nonoverlapping_bcss(g: ig.Graph, get_name=False):
     &#34;&#34;&#34;
     Find a maximum set of bipartitely-complete subgraphs (BCSs) that do not
     share any vertices.
@@ -732,162 +727,6 @@ iterations of vertices are randomized by <code>numpy.random</code>.</p>
     return cliques</code></pre>
 </details>
 </dd>
-<dt id="optgraphstate.graph_tools.get_adjacency"><code class="name flex">
-<span>def <span class="ident">get_adjacency</span></span>(<span>graph)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Get the adjacency matrix of a graph.</p>
-<h2 id="parameters">Parameters</h2>
-<dl>
-<dt><strong><code>graph</code></strong> :&ensp;<code>igraph.Graph</code></dt>
-<dd>Target graph.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><strong><code>adjacency</code></strong> :&ensp;<code>numpy.ndarray</code></dt>
-<dd>Adjacency matrix of <code>graph</code>.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_adjacency(graph):
-    &#34;&#34;&#34;
-    Get the adjacency matrix of a graph.
-
-    Parameters
-    ----------
-    graph : igraph.Graph
-        Target graph.
-
-    Returns
-    -------
-    adjacency : numpy.ndarray
-        Adjacency matrix of `graph`.
-    &#34;&#34;&#34;
-    adj = graph.get_adjacency()
-    return np.array(list(adj))</code></pre>
-</details>
-</dd>
-<dt id="optgraphstate.graph_tools.get_all_edges"><code class="name flex">
-<span>def <span class="ident">get_all_edges</span></span>(<span>graph)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Get all the edges of a graph in terms of pairs of vertex names.</p>
-<h2 id="parameters">Parameters</h2>
-<p>graph : igraph.Graph.
-Target graph.</p>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><strong><code>edges</code></strong> :&ensp;<code>list</code> of <code>2-tuple</code> of <code>str</code></dt>
-<dd>List of the connected pairs of vertex names.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_all_edges(graph):
-    &#34;&#34;&#34;
-    Get all the edges of a graph in terms of pairs of vertex names.
-
-    Parameters
-    ----------
-    graph : igraph.Graph.
-        Target graph.
-
-    Returns
-    -------
-    edges : list of 2-tuple of str
-        List of the connected pairs of vertex names.
-    &#34;&#34;&#34;
-
-    edges = []
-    for e in graph.es:
-        edges.append((e.source_vertex[&#39;name&#39;], e.target_vertex[&#39;name&#39;]))
-    return edges</code></pre>
-</details>
-</dd>
-<dt id="optgraphstate.graph_tools.get_all_vertices"><code class="name flex">
-<span>def <span class="ident">get_all_vertices</span></span>(<span>graph)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Get all the vertex names of a graph.</p>
-<h2 id="parameters">Parameters</h2>
-<dl>
-<dt><strong><code>graph</code></strong> :&ensp;<code>igraph.Graph</code></dt>
-<dd>Target graph.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><strong><code>vertices</code></strong> :&ensp;<code>list</code> of <code>str</code></dt>
-<dd>List of the names of the vertices in <code>graph</code>.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_all_vertices(graph):
-    &#34;&#34;&#34;
-    Get all the vertex names of a graph.
-
-    Parameters
-    ----------
-    graph : igraph.Graph
-        Target graph.
-
-    Returns
-    -------
-    vertices : list of str
-        List of the names of the vertices in `graph`.
-    &#34;&#34;&#34;
-
-    return graph.vs[&#39;name&#39;]</code></pre>
-</details>
-</dd>
-<dt id="optgraphstate.graph_tools.get_edge_attrs"><code class="name flex">
-<span>def <span class="ident">get_edge_attrs</span></span>(<span>graph, v1, v2)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Get the attributes of an edge in a graph.</p>
-<h2 id="parameters">Parameters</h2>
-<dl>
-<dt>graph : igraph.Graph.</dt>
-<dt>Graph that the edge belongs to.</dt>
-<dt><strong><code>v1</code></strong>, <strong><code>v2</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
-<dd>Names of the vertices connected by the edge.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><strong><code>attributes</code></strong> :&ensp;<code>dict</code></dt>
-<dd>Dictionary that contains the attributes of the edge.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_edge_attrs(graph, v1, v2):
-    &#34;&#34;&#34;
-    Get the attributes of an edge in a graph.
-
-    Parameters
-    ----------
-    graph : igraph.Graph.
-        Graph that the edge belongs to.
-    v1, v2 : str or int
-        Names of the vertices connected by the edge.
-
-    Returns
-    -------
-    attributes : dict
-        Dictionary that contains the attributes of the edge.
-    &#34;&#34;&#34;
-    n1 = str(v1)
-    n2 = str(v2)
-
-    link_attrs = graph.es[graph.get_eid(v1, v2)].attributes()
-    return link_attrs</code></pre>
-</details>
-</dd>
 <dt id="optgraphstate.graph_tools.get_graph_from_edges"><code class="name flex">
 <span>def <span class="ident">get_graph_from_edges</span></span>(<span>edges)</span>
 </code></dt>
@@ -927,50 +766,6 @@ vertex label.</dd>
     return ig.Graph(edges=edges)</code></pre>
 </details>
 </dd>
-<dt id="optgraphstate.graph_tools.get_neighbors"><code class="name flex">
-<span>def <span class="ident">get_neighbors</span></span>(<span>graph, vertex)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Get the neighbors of a vertex in a graph.</p>
-<h2 id="parameters">Parameters</h2>
-<dl>
-<dt><strong><code>graph</code></strong> :&ensp;<code>igraph.Graph</code></dt>
-<dd>Graph that the vertex belongs to.</dd>
-<dt><strong><code>vertex</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
-<dd>Name of the vertex.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><strong><code>neighbors</code></strong> :&ensp;<code>list</code> of <code>str</code></dt>
-<dd>List of the names of the neighbors of the vertex.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_neighbors(graph, vertex):
-    &#34;&#34;&#34;
-    Get the neighbors of a vertex in a graph.
-
-    Parameters
-    ----------
-    graph: igraph.Graph
-        Graph that the vertex belongs to.
-
-    vertex: str or int
-        Name of the vertex.
-
-    Returns
-    -------
-    neighbors: list of str
-        List of the names of the neighbors of the vertex.
-    &#34;&#34;&#34;
-
-    vertex = str(vertex)
-
-    return graph.vs[graph.neighbors(str(vertex))][&#39;name&#39;]</code></pre>
-</details>
-</dd>
 <dt id="optgraphstate.graph_tools.get_sample_graph"><code class="name flex">
 <span>def <span class="ident">get_sample_graph</span></span>(<span>shape, *prms)</span>
 </code></dt>
@@ -981,8 +776,6 @@ vertex label.</dd>
 <dl>
 <dt><strong><code>graph</code></strong> :&ensp;<code>igraph.Graph</code></dt>
 <dd>Generated graph.</dd>
-<dt><strong><code>graph_info</code></strong> :&ensp;<code>dict</code></dt>
-<dd>Information of the generated graph including its shape and parameters.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -998,9 +791,6 @@ vertex label.</dd>
     -------
     graph : igraph.Graph
         Generated graph.
-
-    graph_info : dict
-        Information of the generated graph including its shape and parameters.
     &#34;&#34;&#34;
     graph_info = {&#39;shape&#39;: shape}
 
@@ -1009,6 +799,7 @@ vertex label.</dd>
         if len(prms) == 3:
             random.seed(prms[2])
         g = ig.Graph.Erdos_Renyi(n=prms[0], m=prms[1])
+        random.seed()
 
     elif shape == &#39;complete&#39;:
         assert len(prms) == 1
@@ -1026,10 +817,10 @@ vertex label.</dd>
 
     elif shape == &#39;lattice&#39;:
         g = ig.Graph.Lattice(dim=prms, circular=False)
-        graph_info[&#39;size&#39;] = tuple(prms)
+        # graph_info[&#39;size&#39;] = tuple(prms)
 
     elif shape == &#39;tree&#39;:
-        graph_info[&#39;num_children&#39;] = tuple(prms)
+        # graph_info[&#39;num_children&#39;] = tuple(prms)
         g: ig.Graph = ig.Graph.Star(prms[0] + 1)
         parents_start = 1
         n_parents = prms[0]
@@ -1045,84 +836,37 @@ vertex label.</dd>
 
     elif shape == &#39;rhg&#39;:
         assert len(prms) == 3
-        graph_info[&#39;size&#39;] = tuple(prms)
         g = _get_rhg_lattice(*prms)
+        # g[&#39;size&#39;] = tuple(prms)
 
     elif shape == &#39;repeater&#39;:
         assert len(prms) == 1
-        graph_info[&#39;m&#39;] = prms[0]
         g, _ = get_sample_graph(&#39;complete&#39;, 2 * prms[0])
         vcount = g.vcount()
         for v in range(vcount):
             new_v = g.add_vertex()
             g.add_edge(v, new_v)
+        # g[&#39;m&#39;] = prms[0]
 
     elif shape == &#39;parity_encoding&#39;:
         assert len(prms) == 3
-        graph_info[&#39;logical_graph&#39;] = prms[0]
-        graph_info[&#39;n&#39;] = prms[1]
-        graph_info[&#39;m&#39;] = prms[2]
         g = _get_parity_encoded_graph(*prms)
+        # g[&#39;logical_graph&#39;] = prms[0]
+        # g[&#39;n&#39;] = prms[1]
+        # g[&#39;m&#39;] = prms[2]
 
     elif shape == &#39;ptqc&#39;:
         assert len(prms) == 4
-        graph_info[&#39;n&#39;] = prms[0]
-        graph_info[&#39;m&#39;] = prms[1]
-        graph_info[&#39;HIC&#39;] = prms[2]
-        graph_info[&#39;central&#39;] = prms[3]
         g = _get_ptqc_graph(*prms)
+        # g[&#39;n&#39;] = prms[0]
+        # g[&#39;m&#39;] = prms[1]
+        # g[&#39;HIC&#39;] = prms[2]
+        # g[&#39;central&#39;] = prms[3]
 
     else:
         raise ValueError(&#34;Unsupported shape&#34;)
 
-    graph_info[&#39;num_vertices&#39;] = g.vcount()
-    graph_info[&#39;num_edges&#39;] = g.ecount()
-
-    return g, graph_info</code></pre>
-</details>
-</dd>
-<dt id="optgraphstate.graph_tools.get_vertex_attrs"><code class="name flex">
-<span>def <span class="ident">get_vertex_attrs</span></span>(<span>graph, vertex)</span>
-</code></dt>
-<dd>
-<div class="desc"><p>Get the attributes of a vertex of a graph.</p>
-<h2 id="parameters">Parameters</h2>
-<dl>
-<dt><strong><code>graph</code></strong> :&ensp;<code>igraph.Graph</code></dt>
-<dd>Graph that the vertex belongs to.</dd>
-<dt><strong><code>vertex</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
-<dd>Name of the vertex.</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><strong><code>attributes</code></strong> :&ensp;<code>dict</code></dt>
-<dd>Attributes of the vertex.</dd>
-</dl></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_vertex_attrs(graph, vertex):
-    &#34;&#34;&#34;
-    Get the attributes of a vertex of a graph.
-
-    Parameters
-    ----------
-    graph : igraph.Graph
-        Graph that the vertex belongs to.
-
-    vertex : str or int
-        Name of the vertex.
-
-    Returns
-    -------
-    attributes : dict
-        Attributes of the vertex.
-    &#34;&#34;&#34;
-    vertex = str(vertex)
-    attrs = graph.vs.find(name=vertex).attributes()
-
-    return attrs</code></pre>
+    return g</code></pre>
 </details>
 </dd>
 </dl>
@@ -1143,16 +887,10 @@ vertex label.</dd>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="optgraphstate.graph_tools.find_nonoverlapping_bcs" href="#optgraphstate.graph_tools.find_nonoverlapping_bcs">find_nonoverlapping_bcs</a></code></li>
+<li><code><a title="optgraphstate.graph_tools.find_nonoverlapping_bcss" href="#optgraphstate.graph_tools.find_nonoverlapping_bcss">find_nonoverlapping_bcss</a></code></li>
 <li><code><a title="optgraphstate.graph_tools.find_nonoverlapping_cliques" href="#optgraphstate.graph_tools.find_nonoverlapping_cliques">find_nonoverlapping_cliques</a></code></li>
-<li><code><a title="optgraphstate.graph_tools.get_adjacency" href="#optgraphstate.graph_tools.get_adjacency">get_adjacency</a></code></li>
-<li><code><a title="optgraphstate.graph_tools.get_all_edges" href="#optgraphstate.graph_tools.get_all_edges">get_all_edges</a></code></li>
-<li><code><a title="optgraphstate.graph_tools.get_all_vertices" href="#optgraphstate.graph_tools.get_all_vertices">get_all_vertices</a></code></li>
-<li><code><a title="optgraphstate.graph_tools.get_edge_attrs" href="#optgraphstate.graph_tools.get_edge_attrs">get_edge_attrs</a></code></li>
 <li><code><a title="optgraphstate.graph_tools.get_graph_from_edges" href="#optgraphstate.graph_tools.get_graph_from_edges">get_graph_from_edges</a></code></li>
-<li><code><a title="optgraphstate.graph_tools.get_neighbors" href="#optgraphstate.graph_tools.get_neighbors">get_neighbors</a></code></li>
 <li><code><a title="optgraphstate.graph_tools.get_sample_graph" href="#optgraphstate.graph_tools.get_sample_graph">get_sample_graph</a></code></li>
-<li><code><a title="optgraphstate.graph_tools.get_vertex_attrs" href="#optgraphstate.graph_tools.get_vertex_attrs">get_vertex_attrs</a></code></li>
 </ul>
 </li>
 </ul>
