@@ -34,9 +34,6 @@ def get_sample_graph(shape, *prms):
     -------
     graph : igraph.Graph
         Generated graph.
-
-    graph_info : dict
-        Information of the generated graph including its shape and parameters.
     """
     graph_info = {'shape': shape}
 
@@ -45,6 +42,7 @@ def get_sample_graph(shape, *prms):
         if len(prms) == 3:
             random.seed(prms[2])
         g = ig.Graph.Erdos_Renyi(n=prms[0], m=prms[1])
+        random.seed()
 
     elif shape == 'complete':
         assert len(prms) == 1
@@ -62,10 +60,10 @@ def get_sample_graph(shape, *prms):
 
     elif shape == 'lattice':
         g = ig.Graph.Lattice(dim=prms, circular=False)
-        graph_info['size'] = tuple(prms)
+        # graph_info['size'] = tuple(prms)
 
     elif shape == 'tree':
-        graph_info['num_children'] = tuple(prms)
+        # graph_info['num_children'] = tuple(prms)
         g: ig.Graph = ig.Graph.Star(prms[0] + 1)
         parents_start = 1
         n_parents = prms[0]
@@ -81,43 +79,40 @@ def get_sample_graph(shape, *prms):
 
     elif shape == 'rhg':
         assert len(prms) == 3
-        graph_info['size'] = tuple(prms)
         g = _get_rhg_lattice(*prms)
+        # g['size'] = tuple(prms)
 
     elif shape == 'repeater':
         assert len(prms) == 1
-        graph_info['m'] = prms[0]
         g, _ = get_sample_graph('complete', 2 * prms[0])
         vcount = g.vcount()
         for v in range(vcount):
             new_v = g.add_vertex()
             g.add_edge(v, new_v)
+        # g['m'] = prms[0]
 
     elif shape == 'parity_encoding':
         assert len(prms) == 3
-        graph_info['logical_graph'] = prms[0]
-        graph_info['n'] = prms[1]
-        graph_info['m'] = prms[2]
         g = _get_parity_encoded_graph(*prms)
+        # g['logical_graph'] = prms[0]
+        # g['n'] = prms[1]
+        # g['m'] = prms[2]
 
     elif shape == 'ptqc':
         assert len(prms) == 4
-        graph_info['n'] = prms[0]
-        graph_info['m'] = prms[1]
-        graph_info['HIC'] = prms[2]
-        graph_info['central'] = prms[3]
         g = _get_ptqc_graph(*prms)
+        # g['n'] = prms[0]
+        # g['m'] = prms[1]
+        # g['HIC'] = prms[2]
+        # g['central'] = prms[3]
 
     else:
         raise ValueError("Unsupported shape")
 
-    graph_info['num_vertices'] = g.vcount()
-    graph_info['num_edges'] = g.ecount()
-
-    return g, graph_info
+    return g
 
 
-def find_nonoverlapping_bcs(g: ig.Graph, get_name=False):
+def find_nonoverlapping_bcss(g: ig.Graph, get_name=False):
     """
     Find a maximum set of bipartitely-complete subgraphs (BCSs) that do not
     share any vertices.
@@ -245,130 +240,130 @@ def find_nonoverlapping_cliques(g: ig.Graph, get_name=False):
     return cliques
 
 
-def get_all_vertices(graph):
-    """
-    Get all the vertex names of a graph.
-
-    Parameters
-    ----------
-    graph : igraph.Graph
-        Target graph.
-
-    Returns
-    -------
-    vertices : list of str
-        List of the names of the vertices in `graph`.
-    """
-
-    return graph.vs['name']
-
-
-def get_adjacency(graph):
-    """
-    Get the adjacency matrix of a graph.
-
-    Parameters
-    ----------
-    graph : igraph.Graph
-        Target graph.
-
-    Returns
-    -------
-    adjacency : numpy.ndarray
-        Adjacency matrix of `graph`.
-    """
-    adj = graph.get_adjacency()
-    return np.array(list(adj))
-
-
-def get_vertex_attrs(graph, vertex):
-    """
-    Get the attributes of a vertex of a graph.
-
-    Parameters
-    ----------
-    graph : igraph.Graph
-        Graph that the vertex belongs to.
-
-    vertex : str or int
-        Name of the vertex.
-
-    Returns
-    -------
-    attributes : dict
-        Attributes of the vertex.
-    """
-    vertex = str(vertex)
-    attrs = graph.vs.find(name=vertex).attributes()
-
-    return attrs
-
-
-def get_neighbors(graph, vertex):
-    """
-    Get the neighbors of a vertex in a graph.
-
-    Parameters
-    ----------
-    graph: igraph.Graph
-        Graph that the vertex belongs to.
-
-    vertex: str or int
-        Name of the vertex.
-
-    Returns
-    -------
-    neighbors: list of str
-        List of the names of the neighbors of the vertex.
-    """
-
-    vertex = str(vertex)
-
-    return graph.vs[graph.neighbors(str(vertex))]['name']
-
-
-def get_all_edges(graph):
-    """
-    Get all the edges of a graph in terms of pairs of vertex names.
-
-    Parameters
-    ----------
-    graph : igraph.Graph.
-        Target graph.
-
-    Returns
-    -------
-    edges : list of 2-tuple of str
-        List of the connected pairs of vertex names.
-    """
-
-    edges = []
-    for e in graph.es:
-        edges.append((e.source_vertex['name'], e.target_vertex['name']))
-    return edges
-
-
-def get_edge_attrs(graph, v1, v2):
-    """
-    Get the attributes of an edge in a graph.
-
-    Parameters
-    ----------
-    graph : igraph.Graph.
-        Graph that the edge belongs to.
-    v1, v2 : str or int
-        Names of the vertices connected by the edge.
-
-    Returns
-    -------
-    attributes : dict
-        Dictionary that contains the attributes of the edge.
-    """
-    n1 = str(v1)
-    n2 = str(v2)
-
-    link_attrs = graph.es[graph.get_eid(v1, v2)].attributes()
-    return link_attrs
+# def get_all_vertices(graph):
+#     """
+#     Get all the vertex names of a graph.
+#
+#     Parameters
+#     ----------
+#     graph : igraph.Graph
+#         Target graph.
+#
+#     Returns
+#     -------
+#     vertices : list of str
+#         List of the names of the vertices in `graph`.
+#     """
+#
+#     return graph.vs['name']
+#
+#
+# def get_adjacency(graph):
+#     """
+#     Get the adjacency matrix of a graph.
+#
+#     Parameters
+#     ----------
+#     graph : igraph.Graph
+#         Target graph.
+#
+#     Returns
+#     -------
+#     adjacency : numpy.ndarray
+#         Adjacency matrix of `graph`.
+#     """
+#     adj = graph.get_adjacency()
+#     return np.array(list(adj))
+#
+#
+# def get_vertex_attrs(graph, vertex):
+#     """
+#     Get the attributes of a vertex of a graph.
+#
+#     Parameters
+#     ----------
+#     graph : igraph.Graph
+#         Graph that the vertex belongs to.
+#
+#     vertex : str or int
+#         Name of the vertex.
+#
+#     Returns
+#     -------
+#     attributes : dict
+#         Attributes of the vertex.
+#     """
+#     vertex = str(vertex)
+#     attrs = graph.vs.find(name=vertex).attributes()
+#
+#     return attrs
+#
+#
+# def get_neighbors(graph, vertex):
+#     """
+#     Get the neighbors of a vertex in a graph.
+#
+#     Parameters
+#     ----------
+#     graph: igraph.Graph
+#         Graph that the vertex belongs to.
+#
+#     vertex: str or int
+#         Name of the vertex.
+#
+#     Returns
+#     -------
+#     neighbors: list of str
+#         List of the names of the neighbors of the vertex.
+#     """
+#
+#     vertex = str(vertex)
+#
+#     return graph.vs[graph.neighbors(str(vertex))]['name']
+#
+#
+# def get_all_edges(graph):
+#     """
+#     Get all the edges of a graph in terms of pairs of vertex names.
+#
+#     Parameters
+#     ----------
+#     graph : igraph.Graph.
+#         Target graph.
+#
+#     Returns
+#     -------
+#     edges : list of 2-tuple of str
+#         List of the connected pairs of vertex names.
+#     """
+#
+#     edges = []
+#     for e in graph.es:
+#         edges.append((e.source_vertex['name'], e.target_vertex['name']))
+#     return edges
+#
+#
+# def get_edge_attrs(graph, v1, v2):
+#     """
+#     Get the attributes of an edge in a graph.
+#
+#     Parameters
+#     ----------
+#     graph : igraph.Graph.
+#         Graph that the edge belongs to.
+#     v1, v2 : str or int
+#         Names of the vertices connected by the edge.
+#
+#     Returns
+#     -------
+#     attributes : dict
+#         Dictionary that contains the attributes of the edge.
+#     """
+#     n1 = str(v1)
+#     n2 = str(v2)
+#
+#     link_attrs = graph.es[graph.get_eid(v1, v2)].attributes()
+#     return link_attrs
 
 
 def _connect_vertex_sets(graph, inds1, inds2, **attrs):
