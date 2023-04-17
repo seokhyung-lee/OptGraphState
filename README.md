@@ -15,6 +15,16 @@ generation of any graph state. The package has the following features:
   resource states required to generate the desired graph state.
 - Various predefined sample graphs for input.
 
+## Installation
+
+`pip install optgraphstate`
+
+## Manuals
+
 Tutorials: https://github.com/seokhyung-lee/OptGraphState/raw/main/tutorials.pdf
 
 API reference: https://seokhyung-lee.github.io/OptGraphState
+
+## License
+
+OptGraphState is distributed under the MIT license. Please see the LICENSE file for more details.
