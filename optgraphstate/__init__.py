@@ -1410,7 +1410,7 @@ class GraphState:
             Dictionary that contains the information about required fusions and
             Clifford gates.
 
-            Each required fusion is represented by a 2-tuples of 3-tuple:
+            Each required fusion is represented by a 2-tuple of 3-tuples:
             `((n1, q1, cl1), (n2, q2, cl2))`. `n1` and `n2` are the names of
             the nodes involved in the fusion, `q1` and `q2` are `'R'` or `'L'`
             that indicate the qubits undergoing the fusion (`'R'` for a root
