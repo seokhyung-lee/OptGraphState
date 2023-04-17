@@ -63,7 +63,6 @@ def get_sample_graph(shape, *prms):
     graph : igraph.Graph
         Generated graph.
     &#34;&#34;&#34;
-    graph_info = {&#39;shape&#39;: shape}
 
     if shape == &#39;random&#39;:
         assert len(prms) in [2, 3]
@@ -792,7 +791,6 @@ vertex label.</dd>
     graph : igraph.Graph
         Generated graph.
     &#34;&#34;&#34;
-    graph_info = {&#39;shape&#39;: shape}
 
     if shape == &#39;random&#39;:
         assert len(prms) in [2, 3]

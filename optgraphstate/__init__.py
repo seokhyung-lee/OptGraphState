@@ -1593,7 +1593,7 @@ class GraphState:
 
         Vertices with Clifford gates are colored in orange (by default).
         These Clifford gates can be obtained by using
-        `GraphState.get_clifford_in_graph()`.
+        `GraphState.get_vertex_clifford()`.
 
         Parameters
         ----------
@@ -1672,11 +1672,11 @@ class GraphState:
         The number placed on each link indicates the step of the fusion. It is
         presented only when the resource overhead has been computed beforehand.
 
-        An red link indicates that particular Clifford gates should be
+        A red link indicates that particular Clifford gates should be
         applied to the qubits involved in the fusion before it is performed.
 
         These Clifford gates can be obtained by using
-        `GraphState.get_clifford_in_fusion_network()`.
+        `GraphState.get_link_clifford()`.
 
         Parameters
         ----------
