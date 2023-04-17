@@ -35,7 +35,6 @@ def get_sample_graph(shape, *prms):
     graph : igraph.Graph
         Generated graph.
     """
-    graph_info = {'shape': shape}
 
     if shape == 'random':
         assert len(prms) in [2, 3]
