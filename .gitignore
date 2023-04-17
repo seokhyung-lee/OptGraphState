@@ -3,4 +3,6 @@
 /Test.ipynb
 /html/
 /.idea/
-/setup.py
+/build/
+/dist/
+/optgraphstate.egg-info
