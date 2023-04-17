@@ -215,8 +215,6 @@ class GraphState:
             self.graph.vs['clifford'] = cliffords
 
         self.unraveled_graph = convert_type(unraveled_graph, 'unraveled_graph')
-        # self.unraveled_bcss = set()
-        # self.unraveled_cliques = set()
 
         self.fusion_network = convert_type(fusion_network, 'fusion_network')
 
@@ -229,8 +227,6 @@ class GraphState:
         """
         self.unraveled_graph = None
         self.fusion_network = None
-        self.unraveled_bcss = set()
-        self.unraveled_cliques = set()
         self.data = {}
 
     def unravel_graph(self,
@@ -386,8 +382,6 @@ class GraphState:
             if not bcs_exist:
                 break
 
-        self.unraveled_bcss = unraveled_bcss
-
         return unraveled_bcss
 
     def unravel_cliques(self, verbose=False):
@@ -500,6 +494,8 @@ class GraphState:
 
                     v_LC['ext_fusion'] = new_v2['name']
 
+                    v_LC['name'], new_v1['name'] = new_v1['name'], vname_LC
+
                 # Apply LC
                 adj_vnames = set(clique) - {vname_LC}
                 apply_clifford(v_LC, 'RX')
@@ -512,8 +508,6 @@ class GraphState:
                                       itertools.combinations(adj_vnames, r=2)]
                 eids_to_delete.extend(new_eids_to_delete)
                 graph.delete_edges(eids_to_delete)
-
-        self.unraveled_cliques = unraveled_cliques
 
         return unraveled_cliques
 
@@ -570,8 +564,9 @@ class GraphState:
                     'name': node_names,
                     'seed': [True if i == seed else False for i in
                              range(num_internal_nodes)],
-                    'clifford_root': None,
-                    'clifford_leaves': None
+                    'node_group': vname,
+                    # 'clifford_root': None,
+                    # 'clifford_leaves': None
                 }
                 network.add_vertices(num_internal_nodes, attributes=attr)
                 node_groups[vname] \
@@ -663,8 +658,13 @@ class GraphState:
                     root_node = node1['name'] if is_root1 else node2['name']
                     nnames_root_connected.add(root_node)
 
-                cliffords = {node1['name']: v1['clifford'],
-                             node2['name']: v2['clifford']}
+                cliffords = {}
+                cl1 = v1['clifford']
+                cl2 = v2['clifford']
+
+                for node, cl in zip([node1, node2], [cl1, cl2]):
+                    if cl is not None:
+                        cliffords[node['name']] = cl
 
                 network.add_edge(node1,
                                  node2,
@@ -680,52 +680,52 @@ class GraphState:
             plt.show()
 
         # Clifford gates on surviving qubits
-        if 'clifford' in vs_attrs:
-            cls_in_node_group_leaves = {}
-            for v_cl in graph.vs.select(clifford_ne=None, ext_fusion=None):
-                vname = v_cl['name']
-                _, is_root, seed_node_name = get_nodes_containing_vertex(vname)
-                seed_node = network.vs.find(name=seed_node_name)
-                cl = v_cl['clifford']
+        # if 'clifford' in vs_attrs:
+        #     cls_in_node_group_leaves = {}
+        #     for v_cl in graph.vs.select(clifford_ne=None, ext_fusion=None):
+        #         vname = v_cl['name']
+        #         _, is_root, seed_node_name = get_nodes_containing_vertex(vname)
+        #         seed_node = network.vs.find(name=seed_node_name)
+        #         cl = v_cl['clifford']
+        #
+        #         if is_root:
+        #             if seed_node_name not in nnames_root_connected:
+        #                 seed_node['clifford_root'] = cl
+        #
+        #         else:
+        #             try:
+        #                 cls_in_node_group_leaves[seed_node_name].append(cl)
+        #             except KeyError:
+        #                 cls_in_node_group_leaves[seed_node_name] = [cl]
+        #
+        #     for seed_node_name, cls in cls_in_node_group_leaves.items():
+        #         node_group = node_groups[seed_node_name]
+        #         nums_surviving_leaves = []
+        #         for node in node_group:
+        #             if node['name'] in nnames_root_connected:
+        #                 num_surviving_leaves = 3 - node.degree()
+        #             else:
+        #                 num_surviving_leaves = 2 - node.degree()
+        #             nums_surviving_leaves.append(num_surviving_leaves)
+        #         total_num_surviving_leaves = sum(nums_surviving_leaves)
+        #
+        #         if len(cls) < total_num_surviving_leaves:
+        #             cls.extend([None]
+        #                        * (total_num_surviving_leaves - len(cls)))
+        #         np.random.shuffle(cls)
+        #
+        #         i_start = 0
+        #         for node, num_leaves in zip(node_group, nums_surviving_leaves):
+        #             cls_current_node = cls[i_start:i_start + num_leaves]
+        #             cls_current_node = [cl for cl in cls_current_node
+        #                                 if cl is not None]
+        #             node['clifford_leaves'] = cls_current_node
+        #             i_start += num_leaves
 
-                if is_root:
-                    if seed_node_name not in nnames_root_connected:
-                        seed_node['clifford_root'] = cl
-
-                else:
-                    try:
-                        cls_in_node_group_leaves[seed_node_name].append(cl)
-                    except KeyError:
-                        cls_in_node_group_leaves[seed_node_name] = [cl]
-
-            for seed_node_name, cls in cls_in_node_group_leaves.items():
-                node_group = node_groups[seed_node_name]
-                nums_surviving_leaves = []
-                for node in node_group:
-                    if node['name'] in nnames_root_connected:
-                        num_surviving_leaves = 3 - node.degree()
-                    else:
-                        num_surviving_leaves = 2 - node.degree()
-                    nums_surviving_leaves.append(num_surviving_leaves)
-                total_num_surviving_leaves = sum(nums_surviving_leaves)
-
-                if len(cls) < total_num_surviving_leaves:
-                    cls.extend([None]
-                               * (total_num_surviving_leaves - len(cls)))
-                np.random.shuffle(cls)
-
-                i_start = 0
-                for node, num_leaves in zip(node_group, nums_surviving_leaves):
-                    cls_current_node = cls[i_start:i_start + num_leaves]
-                    cls_current_node = [cl for cl in cls_current_node
-                                        if cl is not None]
-                    node['clifford_leaves'] = cls_current_node
-                    i_start += num_leaves
-
-        if verbose:
-            print("Apply Clifford gates:")
-            self.plot_fusion_network()
-            plt.show()
+        # if verbose:
+        #     print("Apply Clifford gates:")
+        #     self.plot_fusion_network()
+        #     plt.show()
 
         self.fusion_network = network
 
@@ -1244,8 +1244,6 @@ class GraphState:
 
         self.unraveled_graph = best_ogs.unraveled_graph
         self.fusion_network = best_ogs.fusion_network
-        self.unraveled_bcss = best_ogs.unraveled_bcss
-        self.unraveled_cliques = best_ogs.unraveled_cliques
         self.data = best_ogs.data
 
         return res
@@ -1375,8 +1373,6 @@ class GraphState:
 
         self.unraveled_graph = best_ogs.unraveled_graph
         self.fusion_network = best_ogs.fusion_network
-        self.unraveled_bcss = best_ogs.unraveled_bcss
-        self.unraveled_cliques = best_ogs.unraveled_cliques
         self.data = best_ogs.data
 
         return res
@@ -1398,133 +1394,103 @@ class GraphState:
         else:
             raise ValueError('Wrong input.')
 
-    # def get_instructions(self,
-    #                      plot_intermediate_graphs=False,
-    #                      plot_final_graph=True):
-    #     """
-    #     Get the instruction to generate the desired graph state from multiple
-    #     three-qubit linear graph states.
-    #
-    #     One of `GraphState.calculate_overhead()`, `GraphState.simulate()`, and
-    #     `GraphState.simulate_adaptive()` must be executed beforehand.
-    #
-    #     Returns
-    #     -------
-    #
-    #     """
-    #     network = self.fusion_network
-    #     steps = network.es['step']
-    #
-    #     qubit_graph = ig.Graph()
-    #     for node in network.vs:
-    #         node_name = node['name']
-    #         vid_start = qubit_graph.vcount()
-    #         attrs = {
-    #             'name': [node_name, node_name + '_1', node_name + '_2'],
-    #             'clifford': None
-    #         }
-    #         if plot_intermediate_graphs:
-    #             attrs['ext_fusion'] = None
-    #         qubit_graph.add_vertices(3, attributes=attrs)
-    #         qubit_graph.add_edges([[vid_start, vid_start + 1],
-    #                                [vid_start, vid_start + 2]])
-    #
-    #     # Obtain instruction
-    #     fusions = {}
-    #     max_step = max(steps)
-    #     for step in range(1, max_step + 1):
-    #         inst_same_step = []
-    #         links = network.es.select(step=step)
-    #         for link in links:
-    #             nname1 = link.source_vertex['name']
-    #             nname2 = link.target_vertex['name']
-    #             kind = link['kind']
-    #             if kind == 'RR':
-    #                 is_root1 = is_root2 = True
-    #             elif kind == 'LL':
-    #                 is_root1 = is_root2 = False
-    #             else:
-    #                 root_node = link['root_node']
-    #                 is_root1 = (root_node == nname1)
-    #                 is_root2 = not is_root1
-    #             cliffords = link['cliffords']
-    #             try:
-    #                 cl1 = cliffords[nname1]
-    #             except KeyError:
-    #                 cl1 = None
-    #             try:
-    #                 cl2 = cliffords[nname2]
-    #             except KeyError:
-    #                 cl2 = None
-    #
-    #             inst_same_step.append(((nname1, is_root1, cl1),
-    #                                    (nname2, is_root2, cl2)))
-    #
-    #         fusions[step] = inst_same_step
-    #
-    #         # Deform the qubit graph
-    #         qubits_to_remove = []
-    #         qubits_to_connect = []
-    #         for fusion in inst_same_step:
-    #             nghs = []
-    #             qubits_to_fuse = []
-    #             for nname, is_root, cl in fusion:
-    #                 if is_root:
-    #                     qubit = qubit_graph.vs.find(name=nname)
-    #                 else:
-    #                     try:
-    #                         qubit = qubit_graph.vs.find(name=nname + '_2')
-    #                     except ValueError:
-    #                         qubit = qubit_graph.vs.find(name=nname + '_1')
-    #                 qubits_to_fuse.append(qubit)
-    #                 nghs.append(qubit.neighbors())
-    #             qubits_to_connect.append(nghs)
-    #             if plot_intermediate_graphs:
-    #                 qubits_to_fuse[0]['ext_fusion'] = qubits_to_fuse[1]['name']
-    #                 qubits_to_fuse[1]['ext_fusion'] = qubits_to_fuse[0]['name']
-    #             qubits_to_remove.extend(qubits_to_fuse)
-    #
-    #         if plot_intermediate_graphs:
-    #             qnames = [qubit['name'] for qubit in qubits_to_remove]
-    #             fig, ax = plot_graph(qubit_graph,
-    #                                  vertices_to_highlight=qnames)
-    #             fig.show()
-    #
-    #         for nghs in qubits_to_connect:
-    #             qubit_graph.add_edges(itertools.product(*nghs))
-    #         qubit_graph.delete_vertices(qubits_to_remove)
-    #
-    #     # Clifford gates on final remaining qubits
-    #     for node in network.vs:
-    #         nname = node['name']
-    #         clifford_root = node['clifford_root']
-    #         clifford_leaves = node['clifford_leaves']
-    #         if clifford_root is not None:
-    #             qubit_graph.vs.find(name=nname)['clifford'] \
-    #                 = clifford_root
-    #         if clifford_leaves is not None:
-    #             remaining_leaves = []
-    #             for vname in [f'{nname}_1', f'{nname}_2']:
-    #                 try:
-    #                     v = qubit_graph.vs.find(name=vname)
-    #                     remaining_leaves.append(v)
-    #                 except ValueError:
-    #                     continue
-    #             assert len(clifford_leaves) <= len(remaining_leaves)
-    #             for i, cl in enumerate(clifford_leaves):
-    #                 remaining_leaves[i]['clifford'] = cl
-    #
-    #     if plot_intermediate_graphs or plot_final_graph:
-    #         fig, ax = plot_graph(qubit_graph)
-    #         fig.show()
-    #
-    #     node_names = network.vs['name']
-    #
-    #     return node_names, fusions, qubit_graph
-
-    def get_clifford_in_graph(self, vertex, unraveled=True):
+    def get_instructions(self):
         """
-        Get the Clifford gates applied to a vertex in the unraveled graph
+        Get the instruction to generate the desired graph state from multiple
+        three-qubit linear graph states.
+
+        One of `GraphState.calculate_overhead()`, `GraphState.simulate()`, and
+        `GraphState.simulate_adaptive()` must be executed beforehand.
+
+        Returns
+        -------
+
+        """
+        network = self.fusion_network
+
+        # Fusions
+        fusions = {}
+        steps = network.es['step']
+        max_step = max(steps)
+        for step in range(1, max_step + 1):
+            inst_same_step = []
+            links = network.es.select(step=step)
+            for link in links:
+                nname1 = link.source_vertex['name']
+                nname2 = link.target_vertex['name']
+                kind = link['kind']
+                if kind == 'RR':
+                    qubit1 = qubit2 = 'R'
+                elif kind == 'LL':
+                    qubit1 = qubit2 = 'L'
+                else:
+                    root_node = link['root_node']
+                    qubit1 = 'R' if root_node == nname1 else 'L'
+                    qubit2 = 'L' if qubit1 == 'R' else 'R'
+                cliffords = link['cliffords']
+                try:
+                    cl1 = cliffords[nname1]
+                except KeyError:
+                    cl1 = None
+                try:
+                    cl2 = cliffords[nname2]
+                except KeyError:
+                    cl2 = None
+
+                inst_same_step.append(((nname1, qubit1, cl1),
+                                       (nname2, qubit2, cl2)))
+
+            fusions[step] = inst_same_step
+
+        # Final remaining qubits & Clifford gates on them
+        qubit_correspondence = {}
+        remaining_leaves = {}
+        for vname in self.graph.vs['name']:
+            v_unrv: ig.Vertex = self.unraveled_graph.vs.find(name=vname)
+            cl = v_unrv['clifford']
+
+            if v_unrv.degree() > 1:
+                corr = (vname, 'R', cl)
+
+            else:
+                v_ngh_unrv = v_unrv.neighbors()[0]
+                seed_node_name = v_ngh_unrv['name']
+                try:
+                    remaining_leaves_curr \
+                        = remaining_leaves[seed_node_name]
+                except KeyError:
+                    node_group \
+                        = network.vs.select(node_group=seed_node_name)
+                    remaining_leaves_curr = {}
+                    for node in node_group:
+                        num_remaining_leaves = 2
+                        for link in node.incident():
+                            kind = link['kind']
+                            if kind == 'LL' \
+                                    or (kind == 'RL'
+                                        and link['root_node'] != node['name']):
+                                num_remaining_leaves -= 1
+                        remaining_leaves_curr[node['name']] \
+                            = num_remaining_leaves
+                    remaining_leaves[seed_node_name] = remaining_leaves_curr
+
+                corr = None
+                for node_name, num_remaining_leaves in remaining_leaves_curr.items():
+                    if num_remaining_leaves:
+                        corr = (node_name, 'L', cl)
+                        remaining_leaves_curr[node_name] -= 1
+
+                assert corr is not None
+
+            qubit_correspondence[vname] = corr
+
+        node_names = network.vs['name']
+
+        return node_names, fusions, qubit_correspondence
+
+    def get_vertex_clifford(self, vertex, unraveled=True):
+        """
+        Get the Clifford gate applied to a vertex in the unraveled graph
         (by default) or the original graph.
 
         Each Clifford gate is represented by a string. For example, `'RX'`
@@ -1542,8 +1508,8 @@ class GraphState:
 
         Returns
         -------
-        cliffords : None or str
-            Clifford gates applied to the vertex.
+        clifford : None or str
+            Clifford gate applied to the vertex.
         """
 
         graph = self.unraveled_graph if unraveled else self.graph
@@ -1553,57 +1519,42 @@ class GraphState:
         else:
             return None
 
-    def get_clifford_in_fusion_network(self, node, node2=None):
+    def get_link_clifford(self, n1, n2):
         """
-        Get the information about Clifford gates for a node or a link in
-        the fusion network.
+        Get the Clifford gates that need to be applied to two qubits involved
+        in the fusion of a given link.
 
-        Each Clifford gate is represented by a string. For example, `'RX'`
-        and `'RZ'` respectively mean pi/2 X-rotation (Z-rotation). If a qubit
-        is subjected to pi/2 X-rotation followed by pi/2 Z-rotation, it is
+        Each Clifford gate is represented by a string. For example, `'RX'` and
+        `'RZ'` respectively mean pi/2 X-rotation (Z-rotation). If a qubit is
+        subjected to pi/2 X-rotation followed by pi/2 Z-rotation, it is
         represented by `'RX-RZ'`.
-
-        If only one node is given, a dictionary `{'root': cl1,
-        'leaves': [cl2, cl3, ...]}` is returned, where `cl1` is the Clifford
-        gate applied to its root qubit and `cl2`, `cl3`, ... are the Clifford
-        gates applied to its leaf qubits.
-
-        If two nodes are given, a dictionary `{node: cl1, node2: cl2}` is
-        returned, where `cl1` and `cl2` are respectively the Clifford gates
-        applied to the qubits (in the nodes `node` and `node2`) that undergo a
-        fusion.
 
         Parameters
         ----------
-        node : int or str
-            Name of the node or the first node of the link.
-
-        node2 : None or int or str (default: None)
-            Name of the second node of the link.
+        n1, n2 : int or str
+            Names of the nodes connected by the link.
 
         Returns
         -------
-        cliffords : dict
-            Information about the Clifford gates for the node or link.
+        cl1, cl2 : None or str
+            Clifford gates applied on the two qubits involved in the fusion
+            of the link.
         """
 
         network = self.fusion_network
-        node = str(node)
-        if node2 is None:
-            node = network.vs.find(name=node)
-            cliffords = {
-                'root': node['clifford_root'],
-                'leaves': node['clifford_leaves']
-            }
-        else:
-            node2 = str(node2)
-            link = network.es[network.get_eid(node, node2)]
-            cliffords = link['cliffords']
-            for n in [node, node2]:
-                if n not in cliffords:
-                    cliffords[n] = None
+        n1 = str(n1)
+        n2 = str(n2)
 
-        return cliffords
+        link = network.es[network.get_eid(n1, n2)]
+        cliffords = link['cliffords']
+        cls = []
+        for n in [n1, n2]:
+            try:
+                cls.append(cliffords[n])
+            except KeyError:
+                cls.append(None)
+
+        return tuple(cls)
 
     def plot_graph(self, unraveled=False, **kwargs):
         """
@@ -1639,7 +1590,7 @@ class GraphState:
         show_vertex_name : bool (default: True)
             Whether to show vertex names.
 
-        vertex_color : str (default: 'white')
+        vertex_color_normal : str (default: 'white')
             Color of vertices without Clifford gates.
 
         vertex_color_clifford : str (default: 'orange')
@@ -1653,7 +1604,7 @@ class GraphState:
 
             Ignored if `vertices_to_highlight` is `None`.
 
-        edge_color : str (default: black)
+        edge_color_normal : str (default: black)
             Color of edges in the graph.
 
         edge_color_fusion : str (default: red)
@@ -1688,18 +1639,14 @@ class GraphState:
         Links have different styles depending on their types:
 
         - 'LL': Solid line
-        - 'RR': Dashed line
+        - 'RR': Dotted line
         - 'RL': Arrow from leaf to root.
 
         The number placed on each link indicates the step of the fusion. It is
         presented only when the resource overhead has been computed beforehand.
 
-        An orange link indicates that particular Clifford gates should be
+        An red link indicates that particular Clifford gates should be
         applied to the qubits involved in the fusion before it is performed.
-
-        An orange node indicates that particular Clifford gates should be
-        applied to one or more remaining qubits of the node after all the
-        fusions are performed.
 
         These Clifford gates can be obtained by using
         `GraphState.get_clifford_in_fusion_network()`.
@@ -1770,8 +1717,6 @@ class GraphState:
                           unraveled_graph=self.unraveled_graph,
                           fusion_network=self.fusion_network)
 
-        copy.unraveled_bcss = self.unraveled_bcss
-        copy.unraveled_cliques = self.unraveled_cliques
         copy.data = self.data.copy()
 
         return copy

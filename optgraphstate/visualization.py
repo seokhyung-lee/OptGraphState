@@ -25,11 +25,11 @@ def plot_graph(graph,
                figsize=(5, 5),
                save=None,
                show_vertex_name=True,
-               vertex_color='white',
+               vertex_color_normal='white',
                vertex_color_clifford='orange',
                vertices_to_highlight=None,
                vertex_color_highlight='purple',
-               edge_color='black',
+               edge_color_normal='black',
                edge_color_fusion='red',
                edge_style_fusion='--',
                **kwargs):
@@ -67,7 +67,7 @@ def plot_graph(graph,
         elif clifford_exists and v['clifford'] is not None:
             color = vertex_color_clifford
         else:
-            color = vertex_color
+            color = vertex_color_normal
         vertex_colors.append(color)
 
     if unraveled:
@@ -84,7 +84,7 @@ def plot_graph(graph,
 
         visual_style = {
             'vertex_color': vertex_colors,
-            'edge_color': [edge_color] * org_ecount + [
+            'edge_color': [edge_color_normal] * org_ecount + [
                 edge_color_fusion] * round(len(vs_with_ext_fusion) / 2), }
 
         if show_vertex_name:
@@ -105,7 +105,7 @@ def plot_graph(graph,
         visual_style = {
             'vertex_label': graph.vs['name'],
             'vertex_color': vertex_colors,
-            'edge_color': edge_color
+            'edge_color': edge_color_normal
         }
 
         visual_style.update(kwargs)
@@ -128,12 +128,12 @@ def plot_fusion_network(network,
                         # show_edge_overhead=False,
                         show_node_name=True,
                         node_color='white',
-                        node_color_clifford='orange',
+                        # node_color_clifford='orange',
                         show_link_name=False,
                         show_fusion_order=True,
                         # uniform_link_style=False,
                         link_color='black',
-                        link_color_clifford='orange',
+                        link_color_clifford='red',
                         **kwargs):
     """
     Plot a fusion network.
@@ -190,9 +190,9 @@ def plot_fusion_network(network,
     #     'RR': link_color_rr,
     #     'RL': link_color_rl,
     #     'LL': link_color_ll}
-    cliffords = [
-        v['clifford_root'] is not None or v['clifford_leaves'] is not None for
-        v in network.vs]
+    # cliffords = [
+    #     v['clifford_root'] is not None or v['clifford_leaves'] is not None for
+    #     v in network.vs]
     # if show_vertex_overhead:
     #     vertex_label = []
     #     for v in network.vs:
@@ -204,9 +204,9 @@ def plot_fusion_network(network,
     # else:
 
     visual_style = {
-        'vertex_color': [node_color_clifford if clifford else node_color
-                         for clifford in cliffords],
-        # 'vertex_color': node_color,
+        # 'vertex_color': [node_color_clifford if clifford else node_color
+        #                  for clifford in cliffords],
+        'vertex_color': node_color,
         # 'vertex_shape': ['square' if clifford else 'circle' for clifford in
         # cliffords],
         'edge_align_label': False,
@@ -265,7 +265,7 @@ def plot_fusion_network(network,
         lines = [child for child in children if isinstance(child, PathPatch)]
 
         edge_style = {
-            'RR': '--',
+            'RR': ':',
             'RL': '-',
             'LL': '-'}
         for eid, line in enumerate(lines):
