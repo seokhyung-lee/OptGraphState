@@ -18,6 +18,6 @@ natively supported.
 three-qubit linear graph states.
 - Various predefined sample graphs for input.
 
-Tutorials: https://github.com/seokhyung-lee/OptGraphState/blob/5350ed90d52b7e993f7200cdfde5674408a56a25/tutorials.pdf
+Tutorials: https://github.com/seokhyung-lee/OptGraphState/raw/main/tutorials.pdf
 
 API reference: https://seokhyung-lee.github.io/OptGraphState
