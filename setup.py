@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="optgraphstate",
-    version="0.1.0",
+    version="0.1.1",
     author="Seok-Hyung Lee",
     author_email="sh.lee1524@gmail.com",
     description="Graph-theoretical optimization of fusion-based graph state generation",
