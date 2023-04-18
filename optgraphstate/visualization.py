@@ -114,7 +114,7 @@ def plot_graph(graph,
     plt.tight_layout()
 
     if save is not None:
-        plt.savefig(save)
+        plt.savefig(save, transparent=True)
 
     return fig, ax
 
@@ -274,6 +274,6 @@ def plot_fusion_network(network,
     plt.tight_layout()
 
     if save is not None:
-        plt.savefig(save)
+        plt.savefig(save, transparent=True)
 
     return fig, ax

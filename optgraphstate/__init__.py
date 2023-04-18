@@ -1734,6 +1734,8 @@ class GraphState:
         """
         Return a **shallow** copy of this object.
 
+        Use `copy.deepcopy()` to get a deep copy.
+
         Returns
         -------
         copy : GraphState

@@ -83,7 +83,7 @@ def get_sample_graph(shape, *prms):
 
     elif shape == 'repeater':
         assert len(prms) == 1
-        g, _ = get_sample_graph('complete', 2 * prms[0])
+        g = get_sample_graph('complete', 2 * prms[0])
         vcount = g.vcount()
         for v in range(vcount):
             new_v = g.add_vertex()
