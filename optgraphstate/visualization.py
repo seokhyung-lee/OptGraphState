@@ -24,7 +24,7 @@ def plot_graph(graph,
                layout='auto',
                figsize=(5, 5),
                save=None,
-               show_vertex_name=True,
+               show_vertex_names=True,
                vertex_color_normal='white',
                vertex_color_clifford='orange',
                vertices_to_highlight=None,
@@ -87,7 +87,7 @@ def plot_graph(graph,
             'edge_color': [edge_color_normal] * org_ecount + [
                 edge_color_fusion] * round(len(vs_with_ext_fusion) / 2), }
 
-        if show_vertex_name:
+        if show_vertex_names:
             visual_style['vertex_label'] = graph.vs['name']
 
         visual_style.update(kwargs)
@@ -103,10 +103,12 @@ def plot_graph(graph,
     else:
         graph = graph
         visual_style = {
-            'vertex_label': graph.vs['name'],
             'vertex_color': vertex_colors,
             'edge_color': edge_color_normal
         }
+
+        if show_vertex_names:
+            visual_style['vertex_label'] = graph.vs['name']
 
         visual_style.update(kwargs)
         _plot_base(graph, ax=ax, layout=layout, **visual_style)
@@ -124,16 +126,15 @@ def plot_fusion_network(network,
                         layout='auto',
                         figsize=(5, 5),
                         save=None,
-                        # show_vertex_overhead=False,
-                        # show_edge_overhead=False,
-                        show_node_name=True,
+                        show_node_names=True,
                         node_color='white',
-                        # node_color_clifford='orange',
-                        show_link_name=False,
-                        show_fusion_order=True,
-                        # uniform_link_style=False,
-                        link_color='black',
-                        link_color_clifford='red',
+                        show_link_names=False,
+                        show_fusion_orders=True,
+                        show_link_cliffords=True,
+                        link_color_ll='black',
+                        link_color_rl='blue',
+                        link_color_rr='red',
+                        arrow_size=0.02,
                         **kwargs):
     """
     Plot a fusion network.
@@ -164,7 +165,7 @@ def plot_fusion_network(network,
     # network.vs.attributes()
     # show_edge_overhead = show_edge_overhead and 'overhead' in
     # network.es.attributes()
-    show_fusion_order = show_fusion_order and 'step' in network.es.attributes()
+    show_fusion_orders = show_fusion_orders and 'order' in network.es.attributes()
     rl_exists = 'RL' in network.es['kind']
 
     if rl_exists:
@@ -186,10 +187,12 @@ def plot_fusion_network(network,
         network_directed.delete_edges(es_to_delete)
         network = network_directed
 
-    # edge_color_dict = {
-    #     'RR': link_color_rr,
-    #     'RL': link_color_rl,
-    #     'LL': link_color_ll}
+    link_color_dict = {
+        'RR': link_color_rr,
+        'RL': link_color_rl,
+        'LL': link_color_ll
+    }
+
     # cliffords = [
     #     v['clifford_root'] is not None or v['clifford_leaves'] is not None for
     #     v in network.vs]
@@ -210,27 +213,27 @@ def plot_fusion_network(network,
         # 'vertex_shape': ['square' if clifford else 'circle' for clifford in
         # cliffords],
         'edge_align_label': False,
-        'edge_color': [link_color_clifford if link['cliffords'] else link_color
-                       for link in network.es],
+        'edge_color': [link_color_dict[kind] for kind in network.es['kind']],
     }
 
-    if show_node_name:
+    if show_node_names:
         visual_style['vertex_label'] \
             = network.vs['name'] if network.vcount() else []
 
     if rl_exists:
         visual_style['vertex_size'] = 0.4
-        visual_style['edge_arrow_size'] = [0.02 if e['kind'] == 'RL' else 0 for
-                                           e in network.es]
+        visual_style['edge_arrow_size'] = [
+            arrow_size if e['kind'] == 'RL' else 0 for
+            e in network.es]
         # visual_style['edge_color'] = [edge_color_dict[e['kind']] for e in
         #                               network.es]
 
-    if network.ecount() and (show_fusion_order or show_link_name):
+    if network.ecount() and (show_fusion_orders or show_link_names):
         visual_style['edge_background'] = 'white'
 
-        if sum([show_fusion_order, show_link_name]) == 1:
-            if show_fusion_order:
-                key = 'step'
+        if sum([show_fusion_orders, show_link_names]) == 1:
+            if show_fusion_orders:
+                key = 'order'
             # elif show_edge_overhead:
             #     key = 'overhead'
             else:
@@ -244,15 +247,20 @@ def plot_fusion_network(network,
                 # if show_edge_labels:
                 #     label.append(f"{e['name']}")
                 # if show_fusion_order:
-                #     label.append(f"{e['step']}")
+                #     label.append(f"{e['order']}")
                 # if show_edge_overhead:
                 #     overhead = e['overhead']
                 #     if abs(overhead % 1) < 1e-6:
                 #         overhead = round(overhead)
                 #     label.append(f"W{overhead}")
                 # label = '_'.join(label)
-                label = f"{e['name']}-{e['step']}"
+                label = f"{e['name']}-{e['order']}"
                 edge_label.append(label)
+
+        if show_link_cliffords:
+            for link in network.es.select(cliffords_ne={}):
+                eid = link.index
+                edge_label[eid] = str(edge_label[eid]) + 'C'
 
         visual_style['edge_label'] = edge_label
 
@@ -265,11 +273,13 @@ def plot_fusion_network(network,
         lines = [child for child in children if isinstance(child, PathPatch)]
 
         edge_style = {
-            'RR': ':',
+            'RR': '--',
             'RL': '-',
-            'LL': '-'}
+            'LL': '-'
+        }
         for eid, line in enumerate(lines):
-            line.set(linestyle=edge_style[network.es[eid]['kind']])
+            link = network.es[eid]
+            line.set(linestyle=edge_style[link['kind']])
 
     plt.tight_layout()
 
