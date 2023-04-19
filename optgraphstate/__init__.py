@@ -1,5 +1,5 @@
 """
-**Version 0.1.1**
+**Version 0.1.2**
 
 **OptGraphState** is a python package that implements the graph-theoretical
 strategy to optimize the fusion-based generation of any graph state.
@@ -9,7 +9,7 @@ The package has the following features:
 type-II fusions from multiple basic resource states, which are three-qubit
 linear graph states.
 - Computing the corresponding resource overhead, which is quantified by the
-average number of required basic resource states.
+average number of required basic resource states or fusion attempts.
 - Visualizing the original graph (of the graph state you want to generate),
 unraveled graphs, and fusion networks. An unraveled graph is a simplified graph
 where the corresponding graph state is equivalent to the desired graph state up
@@ -735,11 +735,14 @@ class GraphState:
             self.plot_fusion_network()
             plt.show()
 
-    def _contract_edge(self, fusion_network, ename_to_merge):
+    def _contract_edge(self,
+                       fusion_network,
+                       ename_to_merge):
         ename_to_merge = str(ename_to_merge)
 
         e_to_merge = fusion_network.es.find(name=ename_to_merge)
-        v_merged, v_removed = e_to_merge.source_vertex, e_to_merge.target_vertex
+        v_merged, v_removed \
+            = e_to_merge.source_vertex, e_to_merge.target_vertex
         enames_updated_weight = []
 
         if v_merged.degree() < v_removed.degree():
@@ -749,7 +752,8 @@ class GraphState:
         vname_removed = v_removed['name']
 
         v_merged['weight'] = e_to_merge['weight']
-        v_merged['step'] = max(v_merged['step'], v_removed['step']) + 1
+        v_merged['weight_f'] = e_to_merge['weight_f']
+        v_merged['order'] = max(v_merged['order'], v_removed['order']) + 1
 
         assert vname_merged != vname_removed
 
@@ -768,13 +772,15 @@ class GraphState:
                     v_vrt = fusion_network.add_vertex(
                         name=f'vrt_{fusion_network.vcount()}',
                         weight=0,
-                        step=0
+                        weight_f=0,
+                        order=0
                     )
                     new_edge = [v_merged, v_vrt]
 
                 fusion_network.add_edge(*new_edge,
                                         name=ename_connected,
-                                        weight=None, )
+                                        weight=None,
+                                        weight_f=None)
 
         fusion_network.delete_edges(eids_to_delete)
 
@@ -784,19 +790,21 @@ class GraphState:
             v_ngh1, v_ngh2 = e_connected.source_vertex, e_connected.target_vertex
 
             assert v_ngh1 != v_ngh2
-            new_weight = (v_ngh1['weight'] + v_ngh2['weight']) / p_succ
-            e_connected['weight'] = new_weight
+            e_connected['weight'] \
+                = (v_ngh1['weight'] + v_ngh2['weight']) / p_succ
+            e_connected['weight_f'] \
+                = (v_ngh1['weight_f'] + v_ngh2['weight_f'] + 1) / p_succ
 
-        self.fusion_network.es.find(name=ename_to_merge)['step'] = v_merged[
-            'step']
+        self.fusion_network.es.find(name=ename_to_merge)['order'] \
+            = v_merged['order']
 
         return enames_updated_weight
 
     def calculate_overhead(self,
                            p_succ=0.5,
                            strategy='weight_and_matching',
-                           fusion_order=None,
-                           get_fusion_order=False, ):
+                           optimize_num_fusions=False,
+                           fusion_order=None):
         """
         Calculate the resource overhead from the fusion network.
 
@@ -810,7 +818,7 @@ class GraphState:
             Success probability of a fusion.
 
         strategy: str, one of ['weight', 'matching', 'weight_and_matching', 'random'] (default: 'weight_and_matching')
-            Strategy for determining the edge to contract in each step.
+            Strategy for determining the edge to contract.
 
             - `'weight'`: Contract a random one among the edges with the
             smallest weight.
@@ -820,14 +828,15 @@ class GraphState:
             the edges with the smallest weight.
             - `'random'`: Contract a random edge.
 
+        optimize_num_fusions : bool
+            If `True`, the average number of required fusion attempts are used
+            to quantify resource overheads instead of the average number of
+            required basic resource states.
+
         fusion_order : None or list of {int or str} (default: None)
             Fusion order given explicitly as vertex names.
 
             If it is not `None`, parameter `strategy` is ignored.
-
-        get_fusion_order : bool (default: False)
-            Whether to include the determined fusion order in the returned
-            data.
 
         Returns
         -------
@@ -835,7 +844,7 @@ class GraphState:
             Outcomes of the calculation, which is a shallow copy of
             `GraphState.data`.<br>
             The calculated overhead and number of steps can be obtained from
-            `data['overhead']` and `data['step']`, respectively.
+            `data['overhead']` and `data['num_steps']`, respectively.
         """
 
         if self.fusion_network is None:
@@ -845,11 +854,13 @@ class GraphState:
         node_num = self.fusion_network.vcount()
         if node_num == 0:
             self.data['overhead'] = 0
-            self.data['step'] = 0
+            self.data['num_fusions'] = 0
+            self.data['num_steps'] = 0
             return self.data
         elif node_num == 1:
             self.data['overhead'] = 1
-            self.data['step'] = 0
+            self.data['num_fusions'] = 0
+            self.data['num_steps'] = 0
             return self.data
 
         if fusion_order is None:
@@ -858,18 +869,22 @@ class GraphState:
         else:
             is_fusion_order_given = True
 
-        self.fusion_network.es['step'] = None
+        self.fusion_network.es['order'] = None
 
         # Initialize intermediate fusion network
         network = self.fusion_network.copy()
         network['p_succ'] = p_succ
         network.vs['weight'] = 1
-        network.vs['step'] = 0
+        network.vs['weight_f'] = 0
+        network.vs['order'] = 0
         network.vs['on'] = True
         network.es['weight'] = 2 / p_succ
-        del network.es['step']
+        network.es['weight_f'] = 1 / p_succ
+        del network.es['order']
 
         turn = 0
+
+        weight_key = 'weight_f' if optimize_num_fusions else 'weight'
 
         # Iterate until no edges remain in the fusion network
         while True:
@@ -881,7 +896,7 @@ class GraphState:
                 is_parellel = True
 
             elif strategy == 'weight':
-                min_weight = min(network.es['weight'])
+                min_weight = min(network.es[weight_key])
                 eids_min_weight = network.es.select(weight=min_weight)
                 enames_curr_step = eids_min_weight['name']
                 is_parellel = len(enames_curr_step) == 1
@@ -908,8 +923,11 @@ class GraphState:
 
             elif 'matching' in strategy:
                 if strategy == 'weight_and_matching':
-                    min_weight = min(network.es['weight'])
-                    es_min_weight = network.es.select(weight=min_weight)
+                    min_weight = min(network.es[weight_key])
+                    if optimize_num_fusions:
+                        es_min_weight = network.es.select(weight_f=min_weight)
+                    else:
+                        es_min_weight = network.es.select(weight=min_weight)
                     subnetwork = network.subgraph_edges(es_min_weight)
                 else:
                     subnetwork = network
@@ -932,9 +950,9 @@ class GraphState:
 
             recalculated_enames = []
 
-            if get_fusion_order and not is_fusion_order_given:
-                fusion_order_curr_step = set()
-                fusion_order.append(fusion_order_curr_step)
+            # if get_fusion_order and not is_fusion_order_given:
+            #     fusion_order_curr_step = set()
+            #     fusion_order.append(fusion_order_curr_step)
 
             while True:
                 if not is_parellel:
@@ -955,29 +973,36 @@ class GraphState:
                     ename_to_merge = np.random.choice(enames_curr_step)
                     enames_curr_step.remove(ename_to_merge)
 
-                if get_fusion_order:
-                    e_to_merge = self.fusion_network.es.find(name=ename_to_merge)
-                    v1, v2 = e_to_merge.source_vertex, e_to_merge.target_vertex
-                    fusion_order_curr_step.add((v1['name'], v2['name'],
-                                                ename_to_merge))
+                # if get_fusion_order:
+                #     e_to_merge = self.fusion_network.es.find(name=ename_to_merge)
+                #     v1, v2 = e_to_merge.source_vertex, e_to_merge.target_vertex
+                #     fusion_order_curr_step.add((v1['name'], v2['name'],
+                #                                 ename_to_merge))
 
-                enames_updated_weight = self._contract_edge(network,
-                                                            ename_to_merge)
+                enames_updated_weight \
+                    = self._contract_edge(network,
+                                          ename_to_merge)
 
                 recalculated_enames.extend(enames_updated_weight)
 
         v_final = network.vs.select(on=True)
         overhead = sum(v_final['weight'])
-        step = max(v_final['step'])
+        num_fusions = sum(v_final['weight_f'])
+        num_steps = max(v_final['order'])
 
         results = {
             'overhead': overhead,
-            'step': step,
+            'num_fusions': num_fusions,
+            'num_steps': num_steps,
             'fusion_order_strategy': strategy,
-            'p_succ': p_succ}
+            'p_succ': p_succ,
+        }
 
-        if get_fusion_order:
-            results['fusion_order'] = fusion_order
+        if optimize_num_fusions:
+            results['optimize_num_fusions'] = True
+
+        # if get_fusion_order:
+        #     results['fusion_order'] = fusion_order
 
         self.data.update(results)
 
@@ -994,6 +1019,7 @@ class GraphState:
                  unravel=True,
                  unravel_bcs_first='random',
                  fusion_order_strategy='weight_and_matching',
+                 optimize_num_fusions=False,
                  seed='keep',
                  verbose=True,
                  pbar=False,
@@ -1057,6 +1083,11 @@ class GraphState:
             the edges with the smallest weight.
             - `'random'`: Contract a random edge.
 
+        optimize_num_fusions : bool
+            If `True`, use the averagte number of fusion attempts to quantify
+            resource overheads instead of the average number of basic resource
+            states.
+
         seed : 'keep' or None or int (default: 'keep')
             Random seed.
 
@@ -1091,6 +1122,8 @@ class GraphState:
 
         t0 = time.time()
 
+        overhead_key = 'num_fusions' if optimize_num_fusions else 'overhead'
+
         if seed != 'keep':
             np.random.seed(seed)
 
@@ -1110,7 +1143,8 @@ class GraphState:
                 seeds_samples = np.random.randint(0, _max_seed(), size=n_iter)
 
             overheads = [] if get_all_data else None
-            steps = [] if get_all_data else None
+            nums_fusions = [] if get_all_data else None
+            nums_steps = [] if get_all_data else None
             seeds = [] if get_all_data else None
             unravalled_graphs = [] if get_all_graphs else None
             fusion_networks = [] if get_all_fusion_networks else None
@@ -1138,16 +1172,18 @@ class GraphState:
                     raise ValueError
 
                 try:
-                    data_now = self.calculate_overhead(p_succ=p_succ,
-                                                       strategy=fusion_order_strategy,
-                                                       **kwargs)
+                    data_now = self.calculate_overhead(
+                        p_succ=p_succ,
+                        strategy=fusion_order_strategy,
+                        optimize_num_fusions=optimize_num_fusions,
+                        **kwargs)
                 except:
                     print('Error occurs during calculating overhead')
                     print('seed =', seed_sample)
                     raise ValueError
 
-                overhead_now = data_now['overhead']
-                step_now = data_now['step']
+                overhead_now = data_now[overhead_key]
+                num_steps_now = data_now['num_steps']
                 self.data['seed'] = seed_sample
 
                 if lowest_overhead is None or overhead_now < lowest_overhead:
@@ -1156,8 +1192,9 @@ class GraphState:
                     best_ogs = self.copy()
 
                 if get_all_data:
-                    overheads.append(overhead_now)
-                    steps.append(step_now)
+                    overheads.append(data_now['overhead'])
+                    nums_fusions.append(data_now['num_fusions'])
+                    nums_steps.append(num_steps_now)
                     seeds.append(seed_sample)
 
                 if get_all_graphs:
@@ -1168,7 +1205,8 @@ class GraphState:
 
             res = {
                 'best_overhead': best_ogs.data['overhead'],
-                'best_step': best_ogs.data['step'],
+                'best_num_fusions': best_ogs.data['num_fusions'],
+                'best_num_steps': best_ogs.data['num_steps'],
                 'best_seed': best_ogs.data['seed'],
                 'n_iter': n_iter}
 
@@ -1180,7 +1218,8 @@ class GraphState:
 
                 if get_all_data:
                     res['overheads'] = overheads
-                    res['steps'] = steps
+                    res['nums_fusions'] = nums_fusions
+                    res['nums_steps'] = nums_steps
                     res['seeds'] = seeds
 
                 if get_all_graphs:
@@ -1199,7 +1238,8 @@ class GraphState:
 
             additional_keys = []
             if get_all_data:
-                additional_keys.extend(['overheads', 'steps', 'seeds'])
+                additional_keys.extend(['overheads', 'nums_fusions',
+                                        'nums_steps', 'seeds'])
             if get_all_graphs:
                 additional_keys.append('unraveled_graphs')
             if get_all_fusion_networks:
@@ -1212,21 +1252,23 @@ class GraphState:
 
             seeds = np.random.randint(0, _max_seed(), size=n_procs)
 
-            res_procs = parmap.starmap(_simulate_single,
-                                       list(zip(ns_samples, seeds)),
-                                       self.graph,
-                                       p_succ=p_succ,
-                                       get_all_data=get_all_data,
-                                       get_all_graphs=get_all_graphs,
-                                       get_all_fusion_networks=get_all_fusion_networks,
-                                       unravel=unravel,
-                                       unravel_bcs_first=unravel_bcs_first,
-                                       fusion_order_strategy=fusion_order_strategy,
-                                       pm_pbar=pbar,
-                                       **kwargs)
-            best_overheads = [res_each['best_overhead'] for res_each in
-                              res_procs]
-            best_proc = np.argmin(best_overheads)
+            res_procs = parmap.starmap(
+                _simulate_single,
+                list(zip(ns_samples, seeds)),
+                self.graph,
+                p_succ=p_succ,
+                get_all_data=get_all_data,
+                get_all_graphs=get_all_graphs,
+                get_all_fusion_networks=get_all_fusion_networks,
+                unravel=unravel,
+                unravel_bcs_first=unravel_bcs_first,
+                fusion_order_strategy=fusion_order_strategy,
+                optimize_num_fusions=optimize_num_fusions,
+                pm_pbar=pbar,
+                **kwargs)
+            best_proc = np.argmin(
+                [res_each[f'best_{overhead_key}'] for res_each in res_procs]
+            )
             res = res_procs[best_proc]
             res['n_iter'] = n_iter
             best_ogs = res['best_ogs']
@@ -1240,7 +1282,7 @@ class GraphState:
                 res[key] = list(itertools.chain(*vals))
 
         if verbose:
-            print(f"Done. Best: {res['best_overhead']:.2f} "
+            print(f"Done. Best: {res[f'best_{overhead_key}']:.2f} "
                   f"({time.time() - t0:.2f} s)")
 
         self.unraveled_graph = best_ogs.unraveled_graph
@@ -1261,6 +1303,7 @@ class GraphState:
                           unravel=True,
                           unravel_bcs_first='random',
                           fusion_order_strategy='weight_and_matching',
+                          optimize_num_fusions=False,
                           seed='keep',
                           verbose=True,
                           pbar=False,
@@ -1305,7 +1348,7 @@ class GraphState:
 
         additional_keys = []
         if get_all_data:
-            additional_keys.extend(['overheads', 'steps'])
+            additional_keys.extend(['overheads', 'nums_fusions', 'nums_steps'])
         if get_all_graphs:
             additional_keys.append('unraveled_graphs')
         if get_all_fusion_networks:
@@ -1317,28 +1360,35 @@ class GraphState:
             else:
                 print("No multiprocessing")
 
+        best_overhead_key \
+            = 'best_num_fusions' if optimize_num_fusions else 'best_overhead'
+
         n_iter_history = []
         n_iter_now = init_n_iter
         res = None
+
         while True:
             if verbose:
                 print(f"Calculating for n_iter = {n_iter_now}... ", end='')
             t0 = time.time()
 
             n_iter_history.append(n_iter_now)
-            res_now = self.simulate(n_iter=n_iter_now,
-                                    p_succ=p_succ,
-                                    mp=mp,
-                                    n_procs=n_procs,
-                                    get_all_data=get_all_data,
-                                    get_all_graphs=get_all_graphs,
-                                    get_all_fusion_networks=get_all_fusion_networks,
-                                    unravel=unravel,
-                                    unravel_bcs_first=unravel_bcs_first,
-                                    fusion_order_strategy=fusion_order_strategy,
-                                    verbose=False,
-                                    pbar=pbar,
-                                    **kwargs)
+            res_now = self.simulate(
+                n_iter=n_iter_now,
+                p_succ=p_succ,
+                mp=mp,
+                n_procs=n_procs,
+                get_all_data=get_all_data,
+                get_all_graphs=get_all_graphs,
+                get_all_fusion_networks=get_all_fusion_networks,
+                unravel=unravel,
+                unravel_bcs_first=unravel_bcs_first,
+                fusion_order_strategy=fusion_order_strategy,
+                optimize_num_fusions=optimize_num_fusions,
+                verbose=False,
+                pbar=pbar,
+                **kwargs
+            )
 
             if res is None:
                 res = res_now
@@ -1349,7 +1399,7 @@ class GraphState:
                 for key in additional_keys:
                     res[key].extend(res_now[key])
 
-                if res_now['best_overhead'] < res['best_overhead']:
+                if res_now[best_overhead_key] < res[best_overhead_key]:
                     for key in additional_keys:
                         res_now[key] = res[key]
                     res = res_now
@@ -1359,12 +1409,12 @@ class GraphState:
 
                 else:
                     if verbose:
-                        print(f"Done. Best: {res['best_overhead']:.2f} ("
+                        print(f"Done. Best: {res[best_overhead_key]:.2f} ("
                               f"{time.time() - t0:.2f} s)")
                     break
 
             if verbose:
-                print(f"Done. Best: {res['best_overhead']:.2f} "
+                print(f"Done. Best: {res[best_overhead_key]:.2f} "
                       f"({time.time() - t0:.2f} s)")
 
         res['n_iter'] = sum(n_iter_history)
@@ -1377,23 +1427,6 @@ class GraphState:
         self.data = best_ogs.data
 
         return res
-
-    def _get_graph(self, graph):
-        if isinstance(graph, ig.Graph):
-            return graph
-
-        if graph == 'graph':
-            return self.graph
-        elif graph in ['unraveled', 'unraveled_graph']:
-            if self.unraveled_graph is None:
-                raise ValueError('No unraveled graph created.')
-            return self.unraveled_graph
-        elif graph in ['network', 'fusion_network']:
-            if self.fusion_network is None:
-                raise ValueError('No fusion network created')
-            return self.fusion_network
-        else:
-            raise ValueError('Wrong input.')
 
     def get_instructions(self):
         """
@@ -1439,11 +1472,11 @@ class GraphState:
 
         # Fusions
         fusions = {}
-        steps = network.es['step']
-        max_step = max(steps)
-        for step in range(1, max_step + 1):
-            inst_same_step = []
-            links = network.es.select(step=step)
+        orders = network.es['order']
+        num_steps = max(orders)
+        for order in range(1, num_steps + 1):
+            inst_same_order = []
+            links = network.es.select(order=order)
             for link in links:
                 nname1 = link.source_vertex['name']
                 nname2 = link.target_vertex['name']
@@ -1466,10 +1499,10 @@ class GraphState:
                 except KeyError:
                     cl2 = None
 
-                inst_same_step.append(((nname1, qubit1, cl1),
-                                       (nname2, qubit2, cl2)))
+                inst_same_order.append(((nname1, qubit1, cl1),
+                                        (nname2, qubit2, cl2)))
 
-            fusions[step] = inst_same_step
+            fusions[order] = inst_same_order
 
         # Final remaining qubits & Clifford gates on them
         qubit_correspondence = {}
@@ -1616,8 +1649,8 @@ class GraphState:
         save : None or str (default: None)
             Path to save the figure.
 
-        show_vertex_name : bool (default: True)
-            Whether to show vertex names.
+        show_vertex_names : bool (default: True)
+            If `True`, vertex names are shown.
 
         vertex_color_normal : str (default: 'white')
             Color of vertices without Clifford gates.
@@ -1665,20 +1698,18 @@ class GraphState:
         """
         Plot the fusion network.
 
-        Links have different styles depending on their types:
+        Links have different styles and colors depending on their types:
 
-        - 'LL': Solid line
-        - 'RR': Dotted line
-        - 'RL': Arrow from leaf to root.
+        - 'LL': Black solid line.
+        - 'RR': Red dashed line.
+        - 'RL': Blue arrow from leaf to root.
 
-        The number placed on each link indicates the step of the fusion. It is
+        The number placed on each link indicates the order of the fusion. It is
         presented only when the resource overhead has been computed beforehand.
 
-        A red link indicates that particular Clifford gates should be
-        applied to the qubits involved in the fusion before it is performed.
-
-        These Clifford gates can be obtained by using
-        `GraphState.get_link_clifford()`.
+        Links with `'C'` written on them indicate fusions accompanied by
+        non-trivial Clifford gates. These Clifford gates can be obtained by
+        using `GraphState.get_link_clifford()`.
 
         Parameters
         ----------
@@ -1695,25 +1726,39 @@ class GraphState:
         save : None or str (default: None)
             Path to save the figure.
 
-        show_node_name : bool (default: True)
-            Whether to show node names.
+        show_node_names : bool (default: True)
+            If `True`, node names are shown.
 
         node_color : str (default: 'white')
             Color of nodes.
 
-        show_link_name : bool (default: False)
-            Whether to show link names.
+        show_link_names : bool (default: False)
+            If `True`, link names are shown.
 
-        show_fusion_order : bool (default: True)
-            Whether to show fusion orders on links.<br>
-            If both `show_link_name` and `show_fusion_order` are `True`,
+        show_fusion_orders : bool (default: True)
+            If `True`, fusion orders are shown on links.
+
+            If both `show_link_names` and `show_fusion_orders` are `True`,
             it is shown as `'{link name}-{fusion order}'`
 
-        link_color : str (default: 'black')
-            Color of links.
+        show_link_cliffords : bool (default: True)
+            If `True`, links that correspond to fusions accompanied by
+            non-trivial Clifford gates are marked as `'C'`.
 
-        link_color_clifford : str (default: 'orange')
-            Color of links with Clifford gates.
+            If `show_link_names` or `show_fusion_orders` are `True`, `'C'` is
+            appended to the end of the label.
+
+        link_color_ll : str (default: 'black')
+            Color of leaf-to-leaf links.
+
+        link_color_rl : str (default: 'blue')
+            Color of root-to-leaf links.
+
+        link_color_rr : str (default: 'red')
+            Color of root-to-root links.
+
+        arrow_size : float (default: 0.02)
+            Size of arrows for root-to-leaf links.
 
         Any other keyword arguments in igraph.plot can be directly used.<br>
         See https://python.igraph.org/en/stable/tutorial.html#layouts-and-plotting <br>
