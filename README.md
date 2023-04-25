@@ -5,7 +5,10 @@
 *Graph-theoretical optimization of fusion-based graph state generation.*
 
 **OptGraphState** is a python package that implements the graph-theoretical strategy to optimize the fusion-based
-generation of any graph state. The package has the following features:
+generation of any graph state, which is proposed
+in [Lee & Jeong, arXiv:2304.11988 [quant-ph] (2023)](https://arxiv.org/abs/2304.11988).
+
+The package has the following features:
 
 - Finding a resource-efficient method of generating a given graph state through type-II fusions from multiple basic
   resource states, which are three-qubit linear graph states.
@@ -30,3 +33,19 @@ API reference: https://seokhyung-lee.github.io/OptGraphState
 ## License
 
 OptGraphState is distributed under the MIT license. Please see the LICENSE file for more details.
+
+## Citation
+
+If you want to cite OptGraphState in an academic work, please cite the arXiv preprint:
+
+```
+@misc{lee2023graph,
+      title={Graph-theoretical optimization of fusion-based graph state generation}, 
+      author={Seok-Hyung Lee and Hyunseok Jeong},
+      year={2023},
+      eprint={2304.11988},
+      archivePrefix={arXiv},
+      primaryClass={quant-ph},
+      url={https://arxiv.org/abs/2304.11988}
+}
+```
