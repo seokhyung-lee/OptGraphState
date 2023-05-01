@@ -91,7 +91,7 @@ def get_sample_graph(shape, *prms):
         # g['m'] = prms[0]
 
     elif shape == 'parity_encoding':
-        assert len(prms) == 3
+        assert len(prms) in [3, 4]
         g = _get_parity_encoded_graph(*prms)
         # g['logical_graph'] = prms[0]
         # g['n'] = prms[1]
@@ -432,35 +432,52 @@ def _get_ptqc_graph(n, m, hic, center):
     return graph
 
 
-def _get_parity_encoded_graph(logical_graph: ig.Graph, n, m):
+def _get_parity_encoded_graph(logical_graph: ig.Graph, n, m, orientation=True):
     logical_vcount = logical_graph.vcount()
     vcount = logical_vcount * n * m
     g = ig.Graph(vcount, vertex_attrs={"clifford": None})
 
     # Internal structure of each logical qubit
-    for first_vid in range(0, vcount, n * m):
-        # The first block is connected with the first vertex of each block.
-        vids_first_block = range(first_vid, first_vid + m)
-        first_vids_each_block = range(first_vid + m, first_vid + n * m, m)
-        _connect_vertex_sets(g, vids_first_block, first_vids_each_block)
+    for vid_1_1 in range(0, vcount, n * m):
 
-        # For each block besides the first one, the first vertex is
-        # connected with the other vertices.
-        for first_vid_each_block in range(first_vid + m, first_vid + n * m, m):
-            other_vids = range(first_vid_each_block + 1,
-                               first_vid_each_block + m)
-            _connect_vertex_sets(g, [first_vid_each_block], other_vids)
+        # |0_L(1_L)> = (|0>^m + |1>^m)^n \pm (|0>^m - |1>^m)^n
+        if orientation:
+            vids_1_all = range(vid_1_1, vid_1_1 + m)
+            vids_not1_1 = range(vid_1_1 + m, vid_1_1 + n * m, m)
+            # The first block is connected with the first vertex of each block.
+            _connect_vertex_sets(g, vids_1_all, vids_not1_1)
 
-        # The first vertex of each block has the Hadamard gate.
-        g.vs[first_vids_each_block]['clifford'] = 'H'
+            # For each block besides the first one, the first vertex is
+            # connected with the other vertices.
+            for vid_x_1 in vids_not1_1:
+                vids_x_not1 = range(vid_x_1 + 1, vid_x_1 + m)
+                _connect_vertex_sets(g, [vid_x_1], vids_x_not1)
+
+            # The first vertex of each block has the Hadamard gate.
+            g.vs[vids_not1_1]['clifford'] = 'H'
+
+        # |0_L(1_L)> = (|+>^m + |->^m)^n
+        else:
+            vids_all_1 = range(vid_1_1, vid_1_1 + n * m, m)
+            for vid_x_1 in vids_all_1:
+                vids_x_not1 = range(vid_x_1 + 1, vid_x_1 + m)
+                _connect_vertex_sets(g, [vid_x_1], vids_x_not1)
+                g.vs[vids_x_not1]['clifford'] = 'H'
 
     # Connection between logical qubits
     for logical_edge in logical_graph.es:
         logical_vids = logical_edge.source, logical_edge.target
-        vids_first_blocks = [
-            range(logical_vid * n * m, logical_vid * n * m + m) for logical_vid
-            in logical_vids]
-        _connect_vertex_sets(g, *vids_first_blocks)
+        physical_vids = []
+        for logical_vid in logical_vids:
+            vid_1_1 = logical_vid * n * m
+            if orientation:
+                physical_vids_sng = range(vid_1_1, vid_1_1 + m)
+
+            else:
+                physical_vids_sng = range(vid_1_1, vid_1_1 + n * m, m)
+            physical_vids.append(physical_vids_sng)
+
+        _connect_vertex_sets(g, *physical_vids)
 
     return g
 

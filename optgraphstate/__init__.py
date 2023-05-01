@@ -1,5 +1,5 @@
 """
-**Version 0.1.2**
+**Version 0.2.0**
 
 **OptGraphState** is a python package that implements the graph-theoretical
 strategy to optimize the fusion-based generation of any graph state, which is
@@ -88,7 +88,8 @@ class GraphState:
 
             If it is given, `edges`, `shape`, and `prms` are ignored.
 
-            If it is [`networkx.Graph`](https://networkx.org/documentation/stable/reference/classes/graph.html), it is internally converted to [`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html).
+            If it is `networkx.Graph`, it is internally converted to
+            `igraph.Graph`.
 
         edges : None or list of 2-tuple of int (default: None)
             List of edges that form the concerned graph.
@@ -129,12 +130,20 @@ class GraphState:
                 along the three axes in the unit of a cell.
             - `shape='repeater'` : Repeater graph with 4m vertices.
                 - `prms[0]` <`int`> : Parameter m.
-            - `shape='parity_encoding'` : (n, m) parity-encoded graph.
-                - `prms[0]` <[`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html)> : Logical-level graph. Can be
+            - `shape='parity_encoding'` : (n, m) parity-encoded graph, where
+            each vertex of the logical graph corresponds to a qubit encoded in
+            the basis of either {(|0>^m + |1>^m)^n +- (|0>^m - |1>^m)^n}
+            (Orientation 1) or {[(|0> + |1>)^m +- (|0> - |1>)^m]^n}
+            (Orientation 2).
+                - `prms[0]` <`igraph.Graph`> : Logical-level graph. Can be
                 generated with python-igraph library directly or from the
-                function `get_graph_from_edges()` or `get_sample_graph`.
+                function `optgraphstate.graph_tools.get_graph_from_edges()` or
+                `optgraphstate.graph_tools.get_sample_graph()`.
                 - `prms[1]`, `prms[2]` <`int`> : Parameters n and m of the
                 parity encoding.
+                - [Optional] `prms[3]` <`bool`> : Orientation of the parity
+                encoding. If `True` (default), "Orientation 1" is used. If
+                `False`, "Orientation 2" is used.
             - `shape='ptqc'` : Microcluster for parity-encoding-based
             topological quantum computing protocol.
                 - `prms[0]`, `prms[1]` <`int`> : Parameter n and m of the

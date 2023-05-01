@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>optgraphstate API documentation</title>
-<meta name="description" content="**Version 0.1.2** …" />
+<meta name="description" content="**Version 0.2.0** …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -22,7 +22,7 @@
 <h1 class="title">Package <code>optgraphstate</code></h1>
 </header>
 <section id="section-intro">
-<p><strong>Version 0.1.2</strong></p>
+<p><strong>Version 0.2.0</strong></p>
 <p><strong>OptGraphState</strong> is a python package that implements the graph-theoretical
 strategy to optimize the fusion-based generation of any graph state, which is
 proposed in <a href="https://arxiv.org/abs/2304.11988">Lee &amp; Jeong, arXiv:2304.11988 [quant-ph] (2023)</a>.
@@ -48,7 +48,7 @@ the desired graph state.</li>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">&#34;&#34;&#34;
-**Version 0.1.2**
+**Version 0.2.0**
 
 **OptGraphState** is a python package that implements the graph-theoretical
 strategy to optimize the fusion-based generation of any graph state, which is
@@ -137,7 +137,8 @@ class GraphState:
 
             If it is given, `edges`, `shape`, and `prms` are ignored.
 
-            If it is [`networkx.Graph`](https://networkx.org/documentation/stable/reference/classes/graph.html), it is internally converted to [`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html).
+            If it is `networkx.Graph`, it is internally converted to
+            `igraph.Graph`.
 
         edges : None or list of 2-tuple of int (default: None)
             List of edges that form the concerned graph.
@@ -178,12 +179,20 @@ class GraphState:
                 along the three axes in the unit of a cell.
             - `shape=&#39;repeater&#39;` : Repeater graph with 4m vertices.
                 - `prms[0]` &lt;`int`&gt; : Parameter m.
-            - `shape=&#39;parity_encoding&#39;` : (n, m) parity-encoded graph.
-                - `prms[0]` &lt;[`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html)&gt; : Logical-level graph. Can be
+            - `shape=&#39;parity_encoding&#39;` : (n, m) parity-encoded graph, where
+            each vertex of the logical graph corresponds to a qubit encoded in
+            the basis of either {(|0&gt;^m + |1&gt;^m)^n +- (|0&gt;^m - |1&gt;^m)^n}
+            (Orientation 1) or {[(|0&gt; + |1&gt;)^m +- (|0&gt; - |1&gt;)^m]^n}
+            (Orientation 2).
+                - `prms[0]` &lt;`igraph.Graph`&gt; : Logical-level graph. Can be
                 generated with python-igraph library directly or from the
-                function `get_graph_from_edges()` or `get_sample_graph`.
+                function `optgraphstate.graph_tools.get_graph_from_edges()` or
+                `optgraphstate.graph_tools.get_sample_graph()`.
                 - `prms[1]`, `prms[2]` &lt;`int`&gt; : Parameters n and m of the
                 parity encoding.
+                - [Optional] `prms[3]` &lt;`bool`&gt; : Orientation of the parity
+                encoding. If `True` (default), &#34;Orientation 1&#34; is used. If
+                `False`, &#34;Orientation 2&#34; is used.
             - `shape=&#39;ptqc&#39;` : Microcluster for parity-encoding-based
             topological quantum computing protocol.
                 - `prms[0]`, `prms[1]` &lt;`int`&gt; : Parameter n and m of the
@@ -1901,7 +1910,8 @@ three ways:</p>
 <dd>
 <p>Graph of the concerned graph.</p>
 <p>If it is given, <code>edges</code>, <code>shape</code>, and <code>prms</code> are ignored.</p>
-<p>If it is <a href="https://networkx.org/documentation/stable/reference/classes/graph.html"><code>networkx.Graph</code></a>, it is internally converted to <a href="https://python.igraph.org/en/stable/api/igraph.Graph.html"><code>igraph.Graph</code></a>.</p>
+<p>If it is <code>networkx.Graph</code>, it is internally converted to
+<code>igraph.Graph</code>.</p>
 </dd>
 <dt><strong><code>edges</code></strong> :&ensp;<code>None</code> or <code>list</code> of <code>2-tuple</code> of <code>int (default: None)</code></dt>
 <dd>
@@ -1953,12 +1963,20 @@ along the three axes in the unit of a cell.</li>
 <li><code>prms[0]</code> &lt;<code>int</code>&gt; : Parameter m.</li>
 </ul>
 </li>
-<li><code>shape='parity_encoding'</code> : (n, m) parity-encoded graph.<ul>
-<li><code>prms[0]</code> &lt;<a href="https://python.igraph.org/en/stable/api/igraph.Graph.html"><code>igraph.Graph</code></a>&gt; : Logical-level graph. Can be
+<li><code>shape='parity_encoding'</code> : (n, m) parity-encoded graph, where
+each vertex of the logical graph corresponds to a qubit encoded in
+the basis of either {(|0&gt;^m + |1&gt;^m)^n +- (|0&gt;^m - |1&gt;^m)^n}
+(Orientation 1) or {[(|0&gt; + |1&gt;)^m +- (|0&gt; - |1&gt;)^m]^n}
+(Orientation 2).<ul>
+<li><code>prms[0]</code> &lt;<code>igraph.Graph</code>&gt; : Logical-level graph. Can be
 generated with python-igraph library directly or from the
-function <code>get_graph_from_edges()</code> or <code>get_sample_graph</code>.</li>
+function <code><a title="optgraphstate.graph_tools.get_graph_from_edges" href="graph_tools.html#optgraphstate.graph_tools.get_graph_from_edges">get_graph_from_edges()</a></code> or
+<code><a title="optgraphstate.graph_tools.get_sample_graph" href="graph_tools.html#optgraphstate.graph_tools.get_sample_graph">get_sample_graph()</a></code>.</li>
 <li><code>prms[1]</code>, <code>prms[2]</code> &lt;<code>int</code>&gt; : Parameters n and m of the
 parity encoding.</li>
+<li>[Optional] <code>prms[3]</code> &lt;<code>bool</code>&gt; : Orientation of the parity
+encoding. If <code>True</code> (default), "Orientation 1" is used. If
+<code>False</code>, "Orientation 2" is used.</li>
 </ul>
 </li>
 <li><code>shape='ptqc'</code> : Microcluster for parity-encoding-based
@@ -2056,7 +2074,8 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
 
             If it is given, `edges`, `shape`, and `prms` are ignored.
 
-            If it is [`networkx.Graph`](https://networkx.org/documentation/stable/reference/classes/graph.html), it is internally converted to [`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html).
+            If it is `networkx.Graph`, it is internally converted to
+            `igraph.Graph`.
 
         edges : None or list of 2-tuple of int (default: None)
             List of edges that form the concerned graph.
@@ -2097,12 +2116,20 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
                 along the three axes in the unit of a cell.
             - `shape=&#39;repeater&#39;` : Repeater graph with 4m vertices.
                 - `prms[0]` &lt;`int`&gt; : Parameter m.
-            - `shape=&#39;parity_encoding&#39;` : (n, m) parity-encoded graph.
-                - `prms[0]` &lt;[`igraph.Graph`](https://python.igraph.org/en/stable/api/igraph.Graph.html)&gt; : Logical-level graph. Can be
+            - `shape=&#39;parity_encoding&#39;` : (n, m) parity-encoded graph, where
+            each vertex of the logical graph corresponds to a qubit encoded in
+            the basis of either {(|0&gt;^m + |1&gt;^m)^n +- (|0&gt;^m - |1&gt;^m)^n}
+            (Orientation 1) or {[(|0&gt; + |1&gt;)^m +- (|0&gt; - |1&gt;)^m]^n}
+            (Orientation 2).
+                - `prms[0]` &lt;`igraph.Graph`&gt; : Logical-level graph. Can be
                 generated with python-igraph library directly or from the
-                function `get_graph_from_edges()` or `get_sample_graph`.
+                function `optgraphstate.graph_tools.get_graph_from_edges()` or
+                `optgraphstate.graph_tools.get_sample_graph()`.
                 - `prms[1]`, `prms[2]` &lt;`int`&gt; : Parameters n and m of the
                 parity encoding.
+                - [Optional] `prms[3]` &lt;`bool`&gt; : Orientation of the parity
+                encoding. If `True` (default), &#34;Orientation 1&#34; is used. If
+                `False`, &#34;Orientation 2&#34; is used.
             - `shape=&#39;ptqc&#39;` : Microcluster for parity-encoding-based
             topological quantum computing protocol.
                 - `prms[0]`, `prms[1]` &lt;`int`&gt; : Parameter n and m of the
