@@ -460,7 +460,15 @@ def _get_ptqc_graph(n, m, hic, center):
     return graph
 
 
-def _get_parity_encoded_graph(logical_graph: ig.Graph, n, m, orientation=True):
+def _get_parity_encoded_graph(logical_graph, n, m, orientation=True):
+    if isinstance(logical_graph, str):
+        if logical_graph in [&#39;3-star&#39;, &#39;3-linear&#39;]:
+            logical_graph = get_sample_graph(&#39;star&#39;, 3)
+        elif logical_graph in [&#39;6-ring&#39;, &#39;6-cycle&#39;]:
+            logical_graph = get_sample_graph(&#39;cycle&#39;, 6)
+        else:
+            raise ValueError(&#34;Unsupported logical graph&#34;)
+
     logical_vcount = logical_graph.vcount()
     vcount = logical_vcount * n * m
     g = ig.Graph(vcount, vertex_attrs={&#34;clifford&#34;: None})

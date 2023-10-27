@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.10.0" />
 <title>optgraphstate API documentation</title>
-<meta name="description" content="**Version 0.2.0** …" />
+<meta name="description" content="**Version 0.3.0** …" />
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
 <link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
 <link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
@@ -22,7 +22,7 @@
 <h1 class="title">Package <code>optgraphstate</code></h1>
 </header>
 <section id="section-intro">
-<p><strong>Version 0.2.0</strong></p>
+<p><strong>Version 0.3.0</strong></p>
 <p><strong>OptGraphState</strong> is a python package that implements the graph-theoretical
 strategy to optimize the fusion-based generation of any graph state, which is
 proposed in <a href="https://arxiv.org/abs/2304.11988">Lee &amp; Jeong, arXiv:2304.11988 [quant-ph] (2023)</a>.
@@ -33,6 +33,8 @@ type-II fusions from multiple basic resource states, which are three-qubit
 linear graph states.</li>
 <li>Computing the corresponding resource overhead, which is quantified by the
 average number of required basic resource states or fusion attempts.</li>
+<li>Computing the success probability of graph state generation when the number
+of provided basic resource states is limited.</li>
 <li>Visualizing the original graph (of the graph state you want to generate),
 unraveled graphs, and fusion networks. An unraveled graph is a simplified graph
 where the corresponding graph state is equivalent to the desired graph state up
@@ -48,7 +50,7 @@ the desired graph state.</li>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">&#34;&#34;&#34;
-**Version 0.2.0**
+**Version 0.3.0**
 
 **OptGraphState** is a python package that implements the graph-theoretical
 strategy to optimize the fusion-based generation of any graph state, which is
@@ -60,6 +62,8 @@ type-II fusions from multiple basic resource states, which are three-qubit
 linear graph states.
 - Computing the corresponding resource overhead, which is quantified by the
 average number of required basic resource states or fusion attempts.
+- Computing the success probability of graph state generation when the number
+of provided basic resource states is limited.
 - Visualizing the original graph (of the graph state you want to generate),
 unraveled graphs, and fusion networks. An unraveled graph is a simplified graph
 where the corresponding graph state is equivalent to the desired graph state up
@@ -73,14 +77,16 @@ Github: https://github.com/seokhyung-lee/OptGraphState
 Tutorials: https://github.com/seokhyung-lee/OptGraphState/raw/main/tutorials.pdf
 &#34;&#34;&#34;
 
-import time
 import os
 import sys
 
 import networkx as nx
+import scipy.signal as scsig
+import decimal as dec
 
 from .graph_tools import *
 from .visualization import *
+from .utils import *
 
 try:
     import parmap
@@ -184,9 +190,13 @@ class GraphState:
             the basis of either {(|0&gt;^m + |1&gt;^m)^n +- (|0&gt;^m - |1&gt;^m)^n}
             (Orientation 1) or {[(|0&gt; + |1&gt;)^m +- (|0&gt; - |1&gt;)^m]^n}
             (Orientation 2).
-                - `prms[0]` &lt;`igraph.Graph`&gt; : Logical-level graph. Can be
-                generated with python-igraph library directly or from the
-                function `optgraphstate.graph_tools.get_graph_from_edges()` or
+                - `prms[0]` &lt;`str` or `igraph.Graph`&gt; : Logical-level graph
+                given by either its name or graph structure. Currently 3-star
+                (`&#34;3-star&#34;` or `&#34;3-linear&#34;`) and 6-cycle (`&#34;6-cycle&#34;` or
+                `&#34;6-ring&#34;`) graphs can be given by their names. For the other
+                graphs, it should be given by an `igraph.Graph` object. It
+                 can be generated directly via python-igraph library or from
+                 the function `optgraphstate.graph_tools.get_graph_from_edges()` or
                 `optgraphstate.graph_tools.get_sample_graph()`.
                 - `prms[1]`, `prms[2]` &lt;`int`&gt; : Parameters n and m of the
                 parity encoding.
@@ -562,7 +572,7 @@ class GraphState:
                 apply_clifford(v_LC, &#39;RX&#39;)
                 for adj_vname in adj_vnames:
                     adj_v = graph.vs.find(name=adj_vname)
-                    apply_clifford(adj_v, &#39;RZ&#39;)
+                    apply_clifford(adj_v, &#39;RZd&#39;)
 
                 new_eids_to_delete = [graph.get_eid(vname1, vname2) for
                                       vname1, vname2 in
@@ -796,8 +806,9 @@ class GraphState:
             plt.show()
 
     def _contract_edge(self,
-                       fusion_network,
-                       ename_to_merge):
+                       fusion_network: ig.Graph,
+                       ename_to_merge,
+                       update_weight_and_order=True):
         ename_to_merge = str(ename_to_merge)
 
         e_to_merge = fusion_network.es.find(name=ename_to_merge)
@@ -811,9 +822,10 @@ class GraphState:
         vname_merged = v_merged[&#39;name&#39;]
         vname_removed = v_removed[&#39;name&#39;]
 
-        v_merged[&#39;weight&#39;] = e_to_merge[&#39;weight&#39;]
-        v_merged[&#39;weight_f&#39;] = e_to_merge[&#39;weight_f&#39;]
-        v_merged[&#39;order&#39;] = max(v_merged[&#39;order&#39;], v_removed[&#39;order&#39;]) + 1
+        if update_weight_and_order:
+            v_merged[&#39;weight&#39;] = e_to_merge[&#39;weight&#39;]
+            v_merged[&#39;weight_f&#39;] = e_to_merge[&#39;weight_f&#39;]
+            v_merged[&#39;order&#39;] = max(v_merged[&#39;order&#39;], v_removed[&#39;order&#39;]) + 1
 
         assert vname_merged != vname_removed
 
@@ -821,44 +833,46 @@ class GraphState:
         v_removed[&#39;on&#39;] = False
 
         for eid_connected in eids_to_delete:
-            e_connected = fusion_network.es[eid_connected]
+            e_connected: ig.Edge = fusion_network.es[eid_connected]
+            attrs_e_connected = e_connected.attributes()
             ename_connected = e_connected[&#39;name&#39;]
             if ename_connected != ename_to_merge:
                 enames_updated_weight.append(ename_connected)
                 vs_ngh = e_connected.source_vertex, e_connected.target_vertex
-                new_edge = [v_merged if v_ngh[&#39;name&#39;] == vname_removed
-                            else v_ngh for v_ngh in vs_ngh]
-                if new_edge[0] == new_edge[1]:  # If a loop is formed
-                    v_vrt = fusion_network.add_vertex(
+                new_edge_eps = [v_merged if v_ngh[&#39;name&#39;] == vname_removed
+                                else v_ngh for v_ngh in vs_ngh]
+                if new_edge_eps[0] == new_edge_eps[1]:  # If a loop is formed
+                    v_vrt: ig.Vertex = fusion_network.add_vertex(
                         name=f&#39;vrt_{fusion_network.vcount()}&#39;,
-                        weight=0,
-                        weight_f=0,
-                        order=0
+                        on=True,
                     )
-                    new_edge = [v_merged, v_vrt]
+                    if update_weight_and_order:
+                        v_vrt.update_attributes(weight=0, weight_f=0, order=0)
+                    if &#39;ftpdf&#39; in fusion_network.vertex_attributes():
+                        v_vrt[&#39;ftpdf&#39;] = np.array([1])
+                    new_edge_eps = [v_merged, v_vrt]
 
-                fusion_network.add_edge(*new_edge,
-                                        name=ename_connected,
-                                        weight=None,
-                                        weight_f=None)
+                new_edge: ig.Edge = fusion_network.add_edge(*new_edge_eps)
+                new_edge.update_attributes(**attrs_e_connected)
 
         fusion_network.delete_edges(eids_to_delete)
 
-        p_succ = fusion_network[&#39;p_succ&#39;]
-        for eid_connected in list(set(fusion_network.incident(v_merged))):
-            e_connected = fusion_network.es[eid_connected]
-            v_ngh1, v_ngh2 = e_connected.source_vertex, e_connected.target_vertex
+        if update_weight_and_order:
+            p_succ = fusion_network[&#39;p_succ&#39;]
+            for eid_connected in list(set(fusion_network.incident(v_merged))):
+                e_connected = fusion_network.es[eid_connected]
+                v_ngh1, v_ngh2 = e_connected.source_vertex, e_connected.target_vertex
 
-            assert v_ngh1 != v_ngh2
-            e_connected[&#39;weight&#39;] \
-                = (v_ngh1[&#39;weight&#39;] + v_ngh2[&#39;weight&#39;]) / p_succ
-            e_connected[&#39;weight_f&#39;] \
-                = (v_ngh1[&#39;weight_f&#39;] + v_ngh2[&#39;weight_f&#39;] + 1) / p_succ
+                assert v_ngh1 != v_ngh2
+                e_connected[&#39;weight&#39;] \
+                    = (v_ngh1[&#39;weight&#39;] + v_ngh2[&#39;weight&#39;]) / p_succ
+                e_connected[&#39;weight_f&#39;] \
+                    = (v_ngh1[&#39;weight_f&#39;] + v_ngh2[&#39;weight_f&#39;] + 1) / p_succ
 
-        self.fusion_network.es.find(name=ename_to_merge)[&#39;order&#39;] \
-            = v_merged[&#39;order&#39;]
+            self.fusion_network.es.find(name=ename_to_merge)[&#39;order&#39;] \
+                = v_merged[&#39;order&#39;]
 
-        return enames_updated_weight
+        return v_merged, v_removed, enames_updated_weight
 
     def calculate_overhead(self,
                            p_succ=0.5,
@@ -866,7 +880,9 @@ class GraphState:
                            optimize_num_fusions=False,
                            fusion_order=None):
         &#34;&#34;&#34;
-        Calculate the resource overhead from the fusion network.
+        Calculate the resource overhead (average number of basic resource
+        states required to generate the desired graph state) from the fusion
+        network.
 
         `GraphState.build_fusion_network()` must be executed beforehand.
 
@@ -877,7 +893,7 @@ class GraphState:
         p_succ : float (default: 0.5)
             Success probability of a fusion.
 
-        strategy: str, one of [&#39;weight&#39;, &#39;matching&#39;, &#39;weight_and_matching&#39;, &#39;random&#39;] (default: &#39;weight_and_matching&#39;)
+        strategy : str, one of [&#39;weight&#39;, &#39;matching&#39;, &#39;weight_and_matching&#39;, &#39;random&#39;] (default: &#39;weight_and_matching&#39;)
             Strategy for determining the edge to contract.
 
             - `&#39;weight&#39;`: Contract a random one among the edges with the
@@ -929,11 +945,11 @@ class GraphState:
         else:
             is_fusion_order_given = True
 
+        self.fusion_network[&#39;p_succ&#39;] = p_succ
         self.fusion_network.es[&#39;order&#39;] = None
 
         # Initialize intermediate fusion network
         network = self.fusion_network.copy()
-        network[&#39;p_succ&#39;] = p_succ
         network.vs[&#39;weight&#39;] = 1
         network.vs[&#39;weight_f&#39;] = 0
         network.vs[&#39;order&#39;] = 0
@@ -1033,13 +1049,7 @@ class GraphState:
                     ename_to_merge = np.random.choice(enames_curr_step)
                     enames_curr_step.remove(ename_to_merge)
 
-                # if get_fusion_order:
-                #     e_to_merge = self.fusion_network.es.find(name=ename_to_merge)
-                #     v1, v2 = e_to_merge.source_vertex, e_to_merge.target_vertex
-                #     fusion_order_curr_step.add((v1[&#39;name&#39;], v2[&#39;name&#39;],
-                #                                 ename_to_merge))
-
-                enames_updated_weight \
+                _, _, enames_updated_weight \
                     = self._contract_edge(network,
                                           ename_to_merge)
 
@@ -1067,6 +1077,137 @@ class GraphState:
         self.data.update(results)
 
         return self.data.copy()
+
+    def calculate_succ_probs(self,
+                             cutoff=0.95,
+                             auto_increasing_prec=True,
+                             prec=30,
+                             prec_interval=5,
+                             diff_overhead_thrs=0.01):
+        &#34;&#34;&#34;
+        Calculate the success probability of the generation of the graph
+        state for each resource count. In other words, get the cumulative mass
+        function (CMF) of the resource count required to generate the state.
+
+        The success probability is computed while increasing the resource
+        count until the value reaches `cutoff` that is smaller than one.
+        The estimated resource overhead, which is the expectation value of the
+        resource count, is additionally returned.
+
+        It uses the `decimal` module instead of float64 since the calculation
+        involves the summation of many extremely small numbers thus
+        floating-point errors may be detrimental.
+
+        By default, it executes the computation multiple times while
+        increasing the precision by 5 starting from 30. When the estimated
+        overhead does not change by more than 1% in two consecutive trials, the
+        iteration is terminated and the results of the final trial are returned.
+
+        Parameters
+        ----------
+        cutoff : float (default: 0.95)
+            Cutoff threshold between 0 and 1.
+        auto_increasing_prec : bool (default: True)
+            Whether to execute the computation multiple times. If it is False,
+            the parameters `prec_interval` and `diff_overhead_thrs` are ignored.
+        prec : int (default: 30)
+            Initial precision of numbers.
+        prec_interval : int (default: 5)
+            Interval of precisions between two consecutive trials.
+        diff_overhead_thrs : float (default: 0.01)
+            Threshold of the relative difference between the overheads estimated
+            from two consecutive trials for determining the termination of the
+            iteration. Namely, if the overheads are `o1` and `o2` in order, the
+            iteration terminates when `abs(o1 - o2) / o2 &lt; diff_overhead_thrs`.
+
+        Returns
+        -------
+        resource_count_start : int
+            First resource count that gives a nonzero probability.
+        probs : 1D numpy array of decimal.Decimal
+            Success probabilities for the resource counts starting from
+            `resource_count_start`. `probs[i]` is the value corresponding to
+            the resource count of `resource_count_start+i`.
+        overhead : decimal.Decimal
+            Resource overhead estimated by the calculated probabilities.
+            If `cutoff` is close enough to one, this value should not be
+            significantly different from the correct one (`GraphState.data[&#39;overhead&#39;]`).
+        &#34;&#34;&#34;
+
+        if self.fusion_network is None:
+            raise ValueError(&#34;No fusion network created&#34;)
+        if &#39;order&#39; not in self.fusion_network.edge_attributes():
+            raise ValueError(&#34;No fusion order data in the fusion network&#34;)
+
+        if not auto_increasing_prec:
+            network: ig.Graph = self.fusion_network.copy()
+
+            dec.getcontext().prec = prec
+            for v in network.vs:
+                v[&#39;ftpdf&#39;] = np.array([dec.Decimal(0), dec.Decimal(1)])
+
+            network.vs[&#39;on&#39;] = True
+            p_succ = network[&#39;p_succ&#39;]
+            orders = network.es[&#39;order&#39;]
+            num_steps = max(orders)
+
+            for order in range(1, num_steps + 1):
+                enames = network.es.select(order=order)[&#39;name&#39;]
+                for ename in enames:
+                    link = network.es.find(name=ename)
+                    node1, node2 = link.source_vertex, link.target_vertex
+                    new_ftpdf = get_ftpdf_contracted(node1[&#39;ftpdf&#39;],
+                                                     node2[&#39;ftpdf&#39;],
+                                                     p_succ=p_succ)
+                    v_merged, _, _ \
+                        = self._contract_edge(network,
+                                              ename,
+                                              update_weight_and_order=False)
+                    v_merged[&#39;ftpdf&#39;] = new_ftpdf
+
+            ftpdfs_final = network.vs.select(on=True)[&#39;ftpdf&#39;]
+            while True:
+                if len(ftpdfs_final) == 1:
+                    ftpdf_final = ftpdfs_final[0]
+                    break
+
+                ftpdfs_final.append(scsig.convolve(ftpdfs_final[0],
+                                                   ftpdfs_final[1]))
+                del ftpdfs_final[1], ftpdfs_final[0]
+
+            resource_count_start, probs \
+                = recover_cmf_from_ftpdf(ftpdf_final,
+                                         cutoff)
+
+            pmf = np.diff(probs)
+            overhead \
+                = np.sum(pmf * np.arange(resource_count_start,
+                                         resource_count_start + pmf.size))
+
+        else:
+            prev_overhead = None
+            while True:
+                print(f&#39;prec = {prec}: &#39;, end=&#39;&#39;)
+                try:
+                    resource_count_start, probs, overhead \
+                        = self.calculate_succ_probs(cutoff=cutoff,
+                                                    auto_increasing_prec=False,
+                                                    prec=prec)
+                except ValueError:
+                    print(&#39;Error&#39;)
+                    prec += prec_interval
+                    continue
+
+                if prev_overhead is not None \
+                        and abs(overhead - prev_overhead) / overhead &lt; diff_overhead_thrs:
+                    print(overhead)
+                    break
+
+                print(overhead)
+                prec += prec_interval
+                prev_overhead = overhead
+
+        return resource_count_start, probs, overhead
 
     def simulate(self,
                  n_iter,
@@ -1143,8 +1284,8 @@ class GraphState:
             the edges with the smallest weight.
             - `&#39;random&#39;`: Contract a random edge.
 
-        optimize_num_fusions : bool
-            If `True`, use the averagte number of fusion attempts to quantify
+        optimize_num_fusions : bool (default: False)
+            If `True`, use the average number of fusion attempts to quantify
             resource overheads instead of the average number of basic resource
             states.
 
@@ -1175,9 +1316,27 @@ class GraphState:
         Returns
         -------
         res : dict
-            Result of the iterations.
+            Dictionary containing the results of the iterations with keys:
 
-            By default, only the information of the best sample is returned.
+            - `&#39;best_overhead&#39;`: Overhead of the best sample (i.e., sample with
+            the smallest overhead or avg fusion number, determined by parameter
+            `optimize_num_fusions`).
+            - `&#39;best_num_fusions&#39;`: Average number of fusions of the best sample.
+            - `&#39;best_num_steps&#39;`: Number of steps (i.e., groups of fusions that
+             can be done in parallel) of the best sample.
+            - `&#39;best_seed&#39;`: Random seed for the best sample. To recover the
+            sample from it, use the `seed` parameter of `GraphState.simulate()`
+            with `n_iter=1`.
+            - `&#39;n_iter&#39;`: Number of iterations. Same as parameter `n_iter`.
+            - `&#39;unravel_bcs_first&#39;`: Whether to unravel BCSs or cliques first
+            for the best sample.
+            - `&#39;overheads&#39;`, `&#39;nums_fusions&#39;`, `&#39;nums_steps&#39;`, `&#39;seeds&#39;`: Lists
+            of the overheads, avg fusion numbers, step numbers, and seeds of 
+            all samples, respectively. Exist only when `get_all_data==True`.
+            - `&#39;unraveled_graphs&#39;`: List of the unraveled graphs of all 
+            samples. Exists only when `get_all_graphs==True`.
+            - `&#39;fusion_networks&#39;`: List of the fusion networks of all samples.
+            Exists only when `get_all_fusion_networks==True`.
         &#34;&#34;&#34;
 
         t0 = time.time()
@@ -1249,7 +1408,7 @@ class GraphState:
                 if lowest_overhead is None or overhead_now &lt; lowest_overhead:
                     best_sample = i_sample
                     lowest_overhead = overhead_now
-                    best_ogs = self.copy()
+                    best_gs = self.copy()
 
                 if get_all_data:
                     overheads.append(data_now[&#39;overhead&#39;])
@@ -1264,14 +1423,14 @@ class GraphState:
                     fusion_networks.append(self.fusion_network)
 
             res = {
-                &#39;best_overhead&#39;: best_ogs.data[&#39;overhead&#39;],
-                &#39;best_num_fusions&#39;: best_ogs.data[&#39;num_fusions&#39;],
-                &#39;best_num_steps&#39;: best_ogs.data[&#39;num_steps&#39;],
-                &#39;best_seed&#39;: best_ogs.data[&#39;seed&#39;],
+                &#39;best_overhead&#39;: best_gs.data[&#39;overhead&#39;],
+                &#39;best_num_fusions&#39;: best_gs.data[&#39;num_fusions&#39;],
+                &#39;best_num_steps&#39;: best_gs.data[&#39;num_steps&#39;],
+                &#39;best_seed&#39;: best_gs.data[&#39;seed&#39;],
                 &#39;n_iter&#39;: n_iter}
 
             if unravel:
-                res[&#39;unravel_bcs_first&#39;] = best_ogs.data[&#39;unravel_bcs_first&#39;]
+                res[&#39;unravel_bcs_first&#39;] = best_gs.data[&#39;unravel_bcs_first&#39;]
 
             if get_all_data or get_all_graphs or get_all_fusion_networks:
                 res[&#39;best_sample&#39;] = best_sample
@@ -1331,8 +1490,8 @@ class GraphState:
             )
             res = res_procs[best_proc]
             res[&#39;n_iter&#39;] = n_iter
-            best_ogs = res[&#39;best_ogs&#39;]
-            del res[&#39;best_ogs&#39;]
+            best_gs = res[&#39;best_gs&#39;]
+            del res[&#39;best_gs&#39;]
 
             if additional_keys:
                 res[&#39;best_sample&#39;] += sum(ns_samples[:best_proc])
@@ -1345,9 +1504,9 @@ class GraphState:
             print(f&#34;Done. Best: {res[f&#39;best_{overhead_key}&#39;]:.2f} &#34;
                   f&#34;({time.time() - t0:.2f} s)&#34;)
 
-        self.unraveled_graph = best_ogs.unraveled_graph
-        self.fusion_network = best_ogs.fusion_network
-        self.data = best_ogs.data
+        self.unraveled_graph = best_gs.unraveled_graph
+        self.fusion_network = best_gs.fusion_network
+        self.data = best_gs.data
 
         return res
 
@@ -1395,9 +1554,8 @@ class GraphState:
         Returns
         -------
         res : dict
-            Result of the iterations.
-
-            By default, only the information of the best sample is given.
+            Dictionary containing the results of the iterations.
+            See the description of `GraphState.simulate()` for its keys.
         &#34;&#34;&#34;
 
         if mp and n_procs is None:
@@ -1452,7 +1610,7 @@ class GraphState:
 
             if res is None:
                 res = res_now
-                best_ogs = self.copy()
+                best_gs = self.copy()
                 n_iter_now *= mul
 
             else:
@@ -1463,7 +1621,7 @@ class GraphState:
                     for key in additional_keys:
                         res_now[key] = res[key]
                     res = res_now
-                    best_ogs = self.copy()
+                    best_gs = self.copy()
 
                     n_iter_now *= mul
 
@@ -1482,9 +1640,9 @@ class GraphState:
         if additional_keys:
             res[&#39;best_sample&#39;] += res[&#39;best_sample&#39;]
 
-        self.unraveled_graph = best_ogs.unraveled_graph
-        self.fusion_network = best_ogs.fusion_network
-        self.data = best_ogs.data
+        self.unraveled_graph = best_gs.unraveled_graph
+        self.fusion_network = best_gs.fusion_network
+        self.data = best_gs.data
 
         return res
 
@@ -1615,10 +1773,16 @@ class GraphState:
         Get the Clifford gate applied to a vertex in the unraveled graph
         (by default) or the original graph.
 
-        Each Clifford gate is represented by a string. For example, `&#39;RX&#39;`
-        and `&#39;RZ&#39;` respectively mean pi/2 X-rotation (Z-rotation). If a qubit
-        is subjected to pi/2 X-rotation followed by pi/2 Z-rotation, it is
-        represented by `&#39;RX-RZ&#39;`.
+        Each Clifford gate is represented by a string. For example,
+
+        - `&#39;RX&#39;`: pi/2 X-rotation
+        - `&#39;RXd&#39;`: -pi/2 X-rotation
+        - `&#39;RZ&#39;`: pi/2 Z-rotation
+        - `&#39;RZd&#39;`: -pi/2 Z-rotation
+        (&#39;d&#39; means dagger)
+
+        If a qubit is subjected to pi/2 X-rotation followed by pi/2
+        Z-rotation, it is represented by `&#39;RX-RZ&#39;`.
 
         Parameters
         ----------
@@ -1646,10 +1810,16 @@ class GraphState:
         Get the Clifford gates that need to be applied to two qubits involved
         in the fusion of a given link.
 
-        Each Clifford gate is represented by a string. For example, `&#39;RX&#39;` and
-        `&#39;RZ&#39;` respectively mean pi/2 X-rotation (Z-rotation). If a qubit is
-        subjected to pi/2 X-rotation followed by pi/2 Z-rotation, it is
-        represented by `&#39;RX-RZ&#39;`.
+        Each Clifford gate is represented by a string. For example,
+
+        - `&#39;RX&#39;`: pi/2 X-rotation
+        - `&#39;RXd&#39;`: -pi/2 X-rotation
+        - `&#39;RZ&#39;`: pi/2 Z-rotation
+        - `&#39;RZd&#39;`: -pi/2 Z-rotation
+        (&#39;d&#39; means dagger)
+
+        If a qubit is subjected to pi/2 X-rotation followed by pi/2
+        Z-rotation, it is represented by `&#39;RX-RZ&#39;`.
 
         Parameters
         ----------
@@ -1861,7 +2031,7 @@ class GraphState:
 def _simulate_single(n_iter, seed, graph, **kwargs):
     ogs = GraphState(graph=graph)
     res = ogs.simulate(n_iter=n_iter, seed=seed, verbose=False, **kwargs)
-    res[&#39;best_ogs&#39;] = ogs
+    res[&#39;best_gs&#39;] = ogs
 
     return res</code></pre>
 </details>
@@ -1968,9 +2138,13 @@ each vertex of the logical graph corresponds to a qubit encoded in
 the basis of either {(|0&gt;^m + |1&gt;^m)^n +- (|0&gt;^m - |1&gt;^m)^n}
 (Orientation 1) or {[(|0&gt; + |1&gt;)^m +- (|0&gt; - |1&gt;)^m]^n}
 (Orientation 2).<ul>
-<li><code>prms[0]</code> &lt;<code>igraph.Graph</code>&gt; : Logical-level graph. Can be
-generated with python-igraph library directly or from the
-function <code><a title="optgraphstate.graph_tools.get_graph_from_edges" href="graph_tools.html#optgraphstate.graph_tools.get_graph_from_edges">get_graph_from_edges()</a></code> or
+<li><code>prms[0]</code> &lt;<code>str</code> or <code>igraph.Graph</code>&gt; : Logical-level graph
+given by either its name or graph structure. Currently 3-star
+(<code>"3-star"</code> or <code>"3-linear"</code>) and 6-cycle (<code>"6-cycle"</code> or
+<code>"6-ring"</code>) graphs can be given by their names. For the other
+graphs, it should be given by an <code>igraph.Graph</code> object. It
+can be generated directly via python-igraph library or from
+the function <code><a title="optgraphstate.graph_tools.get_graph_from_edges" href="graph_tools.html#optgraphstate.graph_tools.get_graph_from_edges">get_graph_from_edges()</a></code> or
 <code><a title="optgraphstate.graph_tools.get_sample_graph" href="graph_tools.html#optgraphstate.graph_tools.get_sample_graph">get_sample_graph()</a></code>.</li>
 <li><code>prms[1]</code>, <code>prms[2]</code> &lt;<code>int</code>&gt; : Parameters n and m of the
 parity encoding.</li>
@@ -2121,9 +2295,13 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
             the basis of either {(|0&gt;^m + |1&gt;^m)^n +- (|0&gt;^m - |1&gt;^m)^n}
             (Orientation 1) or {[(|0&gt; + |1&gt;)^m +- (|0&gt; - |1&gt;)^m]^n}
             (Orientation 2).
-                - `prms[0]` &lt;`igraph.Graph`&gt; : Logical-level graph. Can be
-                generated with python-igraph library directly or from the
-                function `optgraphstate.graph_tools.get_graph_from_edges()` or
+                - `prms[0]` &lt;`str` or `igraph.Graph`&gt; : Logical-level graph
+                given by either its name or graph structure. Currently 3-star
+                (`&#34;3-star&#34;` or `&#34;3-linear&#34;`) and 6-cycle (`&#34;6-cycle&#34;` or
+                `&#34;6-ring&#34;`) graphs can be given by their names. For the other
+                graphs, it should be given by an `igraph.Graph` object. It
+                 can be generated directly via python-igraph library or from
+                 the function `optgraphstate.graph_tools.get_graph_from_edges()` or
                 `optgraphstate.graph_tools.get_sample_graph()`.
                 - `prms[1]`, `prms[2]` &lt;`int`&gt; : Parameters n and m of the
                 parity encoding.
@@ -2499,7 +2677,7 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
                 apply_clifford(v_LC, &#39;RX&#39;)
                 for adj_vname in adj_vnames:
                     adj_v = graph.vs.find(name=adj_vname)
-                    apply_clifford(adj_v, &#39;RZ&#39;)
+                    apply_clifford(adj_v, &#39;RZd&#39;)
 
                 new_eids_to_delete = [graph.get_eid(vname1, vname2) for
                                       vname1, vname2 in
@@ -2733,8 +2911,9 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
             plt.show()
 
     def _contract_edge(self,
-                       fusion_network,
-                       ename_to_merge):
+                       fusion_network: ig.Graph,
+                       ename_to_merge,
+                       update_weight_and_order=True):
         ename_to_merge = str(ename_to_merge)
 
         e_to_merge = fusion_network.es.find(name=ename_to_merge)
@@ -2748,9 +2927,10 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
         vname_merged = v_merged[&#39;name&#39;]
         vname_removed = v_removed[&#39;name&#39;]
 
-        v_merged[&#39;weight&#39;] = e_to_merge[&#39;weight&#39;]
-        v_merged[&#39;weight_f&#39;] = e_to_merge[&#39;weight_f&#39;]
-        v_merged[&#39;order&#39;] = max(v_merged[&#39;order&#39;], v_removed[&#39;order&#39;]) + 1
+        if update_weight_and_order:
+            v_merged[&#39;weight&#39;] = e_to_merge[&#39;weight&#39;]
+            v_merged[&#39;weight_f&#39;] = e_to_merge[&#39;weight_f&#39;]
+            v_merged[&#39;order&#39;] = max(v_merged[&#39;order&#39;], v_removed[&#39;order&#39;]) + 1
 
         assert vname_merged != vname_removed
 
@@ -2758,44 +2938,46 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
         v_removed[&#39;on&#39;] = False
 
         for eid_connected in eids_to_delete:
-            e_connected = fusion_network.es[eid_connected]
+            e_connected: ig.Edge = fusion_network.es[eid_connected]
+            attrs_e_connected = e_connected.attributes()
             ename_connected = e_connected[&#39;name&#39;]
             if ename_connected != ename_to_merge:
                 enames_updated_weight.append(ename_connected)
                 vs_ngh = e_connected.source_vertex, e_connected.target_vertex
-                new_edge = [v_merged if v_ngh[&#39;name&#39;] == vname_removed
-                            else v_ngh for v_ngh in vs_ngh]
-                if new_edge[0] == new_edge[1]:  # If a loop is formed
-                    v_vrt = fusion_network.add_vertex(
+                new_edge_eps = [v_merged if v_ngh[&#39;name&#39;] == vname_removed
+                                else v_ngh for v_ngh in vs_ngh]
+                if new_edge_eps[0] == new_edge_eps[1]:  # If a loop is formed
+                    v_vrt: ig.Vertex = fusion_network.add_vertex(
                         name=f&#39;vrt_{fusion_network.vcount()}&#39;,
-                        weight=0,
-                        weight_f=0,
-                        order=0
+                        on=True,
                     )
-                    new_edge = [v_merged, v_vrt]
+                    if update_weight_and_order:
+                        v_vrt.update_attributes(weight=0, weight_f=0, order=0)
+                    if &#39;ftpdf&#39; in fusion_network.vertex_attributes():
+                        v_vrt[&#39;ftpdf&#39;] = np.array([1])
+                    new_edge_eps = [v_merged, v_vrt]
 
-                fusion_network.add_edge(*new_edge,
-                                        name=ename_connected,
-                                        weight=None,
-                                        weight_f=None)
+                new_edge: ig.Edge = fusion_network.add_edge(*new_edge_eps)
+                new_edge.update_attributes(**attrs_e_connected)
 
         fusion_network.delete_edges(eids_to_delete)
 
-        p_succ = fusion_network[&#39;p_succ&#39;]
-        for eid_connected in list(set(fusion_network.incident(v_merged))):
-            e_connected = fusion_network.es[eid_connected]
-            v_ngh1, v_ngh2 = e_connected.source_vertex, e_connected.target_vertex
+        if update_weight_and_order:
+            p_succ = fusion_network[&#39;p_succ&#39;]
+            for eid_connected in list(set(fusion_network.incident(v_merged))):
+                e_connected = fusion_network.es[eid_connected]
+                v_ngh1, v_ngh2 = e_connected.source_vertex, e_connected.target_vertex
 
-            assert v_ngh1 != v_ngh2
-            e_connected[&#39;weight&#39;] \
-                = (v_ngh1[&#39;weight&#39;] + v_ngh2[&#39;weight&#39;]) / p_succ
-            e_connected[&#39;weight_f&#39;] \
-                = (v_ngh1[&#39;weight_f&#39;] + v_ngh2[&#39;weight_f&#39;] + 1) / p_succ
+                assert v_ngh1 != v_ngh2
+                e_connected[&#39;weight&#39;] \
+                    = (v_ngh1[&#39;weight&#39;] + v_ngh2[&#39;weight&#39;]) / p_succ
+                e_connected[&#39;weight_f&#39;] \
+                    = (v_ngh1[&#39;weight_f&#39;] + v_ngh2[&#39;weight_f&#39;] + 1) / p_succ
 
-        self.fusion_network.es.find(name=ename_to_merge)[&#39;order&#39;] \
-            = v_merged[&#39;order&#39;]
+            self.fusion_network.es.find(name=ename_to_merge)[&#39;order&#39;] \
+                = v_merged[&#39;order&#39;]
 
-        return enames_updated_weight
+        return v_merged, v_removed, enames_updated_weight
 
     def calculate_overhead(self,
                            p_succ=0.5,
@@ -2803,7 +2985,9 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
                            optimize_num_fusions=False,
                            fusion_order=None):
         &#34;&#34;&#34;
-        Calculate the resource overhead from the fusion network.
+        Calculate the resource overhead (average number of basic resource
+        states required to generate the desired graph state) from the fusion
+        network.
 
         `GraphState.build_fusion_network()` must be executed beforehand.
 
@@ -2814,7 +2998,7 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
         p_succ : float (default: 0.5)
             Success probability of a fusion.
 
-        strategy: str, one of [&#39;weight&#39;, &#39;matching&#39;, &#39;weight_and_matching&#39;, &#39;random&#39;] (default: &#39;weight_and_matching&#39;)
+        strategy : str, one of [&#39;weight&#39;, &#39;matching&#39;, &#39;weight_and_matching&#39;, &#39;random&#39;] (default: &#39;weight_and_matching&#39;)
             Strategy for determining the edge to contract.
 
             - `&#39;weight&#39;`: Contract a random one among the edges with the
@@ -2866,11 +3050,11 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
         else:
             is_fusion_order_given = True
 
+        self.fusion_network[&#39;p_succ&#39;] = p_succ
         self.fusion_network.es[&#39;order&#39;] = None
 
         # Initialize intermediate fusion network
         network = self.fusion_network.copy()
-        network[&#39;p_succ&#39;] = p_succ
         network.vs[&#39;weight&#39;] = 1
         network.vs[&#39;weight_f&#39;] = 0
         network.vs[&#39;order&#39;] = 0
@@ -2970,13 +3154,7 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
                     ename_to_merge = np.random.choice(enames_curr_step)
                     enames_curr_step.remove(ename_to_merge)
 
-                # if get_fusion_order:
-                #     e_to_merge = self.fusion_network.es.find(name=ename_to_merge)
-                #     v1, v2 = e_to_merge.source_vertex, e_to_merge.target_vertex
-                #     fusion_order_curr_step.add((v1[&#39;name&#39;], v2[&#39;name&#39;],
-                #                                 ename_to_merge))
-
-                enames_updated_weight \
+                _, _, enames_updated_weight \
                     = self._contract_edge(network,
                                           ename_to_merge)
 
@@ -3004,6 +3182,137 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
         self.data.update(results)
 
         return self.data.copy()
+
+    def calculate_succ_probs(self,
+                             cutoff=0.95,
+                             auto_increasing_prec=True,
+                             prec=30,
+                             prec_interval=5,
+                             diff_overhead_thrs=0.01):
+        &#34;&#34;&#34;
+        Calculate the success probability of the generation of the graph
+        state for each resource count. In other words, get the cumulative mass
+        function (CMF) of the resource count required to generate the state.
+
+        The success probability is computed while increasing the resource
+        count until the value reaches `cutoff` that is smaller than one.
+        The estimated resource overhead, which is the expectation value of the
+        resource count, is additionally returned.
+
+        It uses the `decimal` module instead of float64 since the calculation
+        involves the summation of many extremely small numbers thus
+        floating-point errors may be detrimental.
+
+        By default, it executes the computation multiple times while
+        increasing the precision by 5 starting from 30. When the estimated
+        overhead does not change by more than 1% in two consecutive trials, the
+        iteration is terminated and the results of the final trial are returned.
+
+        Parameters
+        ----------
+        cutoff : float (default: 0.95)
+            Cutoff threshold between 0 and 1.
+        auto_increasing_prec : bool (default: True)
+            Whether to execute the computation multiple times. If it is False,
+            the parameters `prec_interval` and `diff_overhead_thrs` are ignored.
+        prec : int (default: 30)
+            Initial precision of numbers.
+        prec_interval : int (default: 5)
+            Interval of precisions between two consecutive trials.
+        diff_overhead_thrs : float (default: 0.01)
+            Threshold of the relative difference between the overheads estimated
+            from two consecutive trials for determining the termination of the
+            iteration. Namely, if the overheads are `o1` and `o2` in order, the
+            iteration terminates when `abs(o1 - o2) / o2 &lt; diff_overhead_thrs`.
+
+        Returns
+        -------
+        resource_count_start : int
+            First resource count that gives a nonzero probability.
+        probs : 1D numpy array of decimal.Decimal
+            Success probabilities for the resource counts starting from
+            `resource_count_start`. `probs[i]` is the value corresponding to
+            the resource count of `resource_count_start+i`.
+        overhead : decimal.Decimal
+            Resource overhead estimated by the calculated probabilities.
+            If `cutoff` is close enough to one, this value should not be
+            significantly different from the correct one (`GraphState.data[&#39;overhead&#39;]`).
+        &#34;&#34;&#34;
+
+        if self.fusion_network is None:
+            raise ValueError(&#34;No fusion network created&#34;)
+        if &#39;order&#39; not in self.fusion_network.edge_attributes():
+            raise ValueError(&#34;No fusion order data in the fusion network&#34;)
+
+        if not auto_increasing_prec:
+            network: ig.Graph = self.fusion_network.copy()
+
+            dec.getcontext().prec = prec
+            for v in network.vs:
+                v[&#39;ftpdf&#39;] = np.array([dec.Decimal(0), dec.Decimal(1)])
+
+            network.vs[&#39;on&#39;] = True
+            p_succ = network[&#39;p_succ&#39;]
+            orders = network.es[&#39;order&#39;]
+            num_steps = max(orders)
+
+            for order in range(1, num_steps + 1):
+                enames = network.es.select(order=order)[&#39;name&#39;]
+                for ename in enames:
+                    link = network.es.find(name=ename)
+                    node1, node2 = link.source_vertex, link.target_vertex
+                    new_ftpdf = get_ftpdf_contracted(node1[&#39;ftpdf&#39;],
+                                                     node2[&#39;ftpdf&#39;],
+                                                     p_succ=p_succ)
+                    v_merged, _, _ \
+                        = self._contract_edge(network,
+                                              ename,
+                                              update_weight_and_order=False)
+                    v_merged[&#39;ftpdf&#39;] = new_ftpdf
+
+            ftpdfs_final = network.vs.select(on=True)[&#39;ftpdf&#39;]
+            while True:
+                if len(ftpdfs_final) == 1:
+                    ftpdf_final = ftpdfs_final[0]
+                    break
+
+                ftpdfs_final.append(scsig.convolve(ftpdfs_final[0],
+                                                   ftpdfs_final[1]))
+                del ftpdfs_final[1], ftpdfs_final[0]
+
+            resource_count_start, probs \
+                = recover_cmf_from_ftpdf(ftpdf_final,
+                                         cutoff)
+
+            pmf = np.diff(probs)
+            overhead \
+                = np.sum(pmf * np.arange(resource_count_start,
+                                         resource_count_start + pmf.size))
+
+        else:
+            prev_overhead = None
+            while True:
+                print(f&#39;prec = {prec}: &#39;, end=&#39;&#39;)
+                try:
+                    resource_count_start, probs, overhead \
+                        = self.calculate_succ_probs(cutoff=cutoff,
+                                                    auto_increasing_prec=False,
+                                                    prec=prec)
+                except ValueError:
+                    print(&#39;Error&#39;)
+                    prec += prec_interval
+                    continue
+
+                if prev_overhead is not None \
+                        and abs(overhead - prev_overhead) / overhead &lt; diff_overhead_thrs:
+                    print(overhead)
+                    break
+
+                print(overhead)
+                prec += prec_interval
+                prev_overhead = overhead
+
+        return resource_count_start, probs, overhead
 
     def simulate(self,
                  n_iter,
@@ -3080,8 +3389,8 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
             the edges with the smallest weight.
             - `&#39;random&#39;`: Contract a random edge.
 
-        optimize_num_fusions : bool
-            If `True`, use the averagte number of fusion attempts to quantify
+        optimize_num_fusions : bool (default: False)
+            If `True`, use the average number of fusion attempts to quantify
             resource overheads instead of the average number of basic resource
             states.
 
@@ -3112,9 +3421,27 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
         Returns
         -------
         res : dict
-            Result of the iterations.
+            Dictionary containing the results of the iterations with keys:
 
-            By default, only the information of the best sample is returned.
+            - `&#39;best_overhead&#39;`: Overhead of the best sample (i.e., sample with
+            the smallest overhead or avg fusion number, determined by parameter
+            `optimize_num_fusions`).
+            - `&#39;best_num_fusions&#39;`: Average number of fusions of the best sample.
+            - `&#39;best_num_steps&#39;`: Number of steps (i.e., groups of fusions that
+             can be done in parallel) of the best sample.
+            - `&#39;best_seed&#39;`: Random seed for the best sample. To recover the
+            sample from it, use the `seed` parameter of `GraphState.simulate()`
+            with `n_iter=1`.
+            - `&#39;n_iter&#39;`: Number of iterations. Same as parameter `n_iter`.
+            - `&#39;unravel_bcs_first&#39;`: Whether to unravel BCSs or cliques first
+            for the best sample.
+            - `&#39;overheads&#39;`, `&#39;nums_fusions&#39;`, `&#39;nums_steps&#39;`, `&#39;seeds&#39;`: Lists
+            of the overheads, avg fusion numbers, step numbers, and seeds of 
+            all samples, respectively. Exist only when `get_all_data==True`.
+            - `&#39;unraveled_graphs&#39;`: List of the unraveled graphs of all 
+            samples. Exists only when `get_all_graphs==True`.
+            - `&#39;fusion_networks&#39;`: List of the fusion networks of all samples.
+            Exists only when `get_all_fusion_networks==True`.
         &#34;&#34;&#34;
 
         t0 = time.time()
@@ -3186,7 +3513,7 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
                 if lowest_overhead is None or overhead_now &lt; lowest_overhead:
                     best_sample = i_sample
                     lowest_overhead = overhead_now
-                    best_ogs = self.copy()
+                    best_gs = self.copy()
 
                 if get_all_data:
                     overheads.append(data_now[&#39;overhead&#39;])
@@ -3201,14 +3528,14 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
                     fusion_networks.append(self.fusion_network)
 
             res = {
-                &#39;best_overhead&#39;: best_ogs.data[&#39;overhead&#39;],
-                &#39;best_num_fusions&#39;: best_ogs.data[&#39;num_fusions&#39;],
-                &#39;best_num_steps&#39;: best_ogs.data[&#39;num_steps&#39;],
-                &#39;best_seed&#39;: best_ogs.data[&#39;seed&#39;],
+                &#39;best_overhead&#39;: best_gs.data[&#39;overhead&#39;],
+                &#39;best_num_fusions&#39;: best_gs.data[&#39;num_fusions&#39;],
+                &#39;best_num_steps&#39;: best_gs.data[&#39;num_steps&#39;],
+                &#39;best_seed&#39;: best_gs.data[&#39;seed&#39;],
                 &#39;n_iter&#39;: n_iter}
 
             if unravel:
-                res[&#39;unravel_bcs_first&#39;] = best_ogs.data[&#39;unravel_bcs_first&#39;]
+                res[&#39;unravel_bcs_first&#39;] = best_gs.data[&#39;unravel_bcs_first&#39;]
 
             if get_all_data or get_all_graphs or get_all_fusion_networks:
                 res[&#39;best_sample&#39;] = best_sample
@@ -3268,8 +3595,8 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
             )
             res = res_procs[best_proc]
             res[&#39;n_iter&#39;] = n_iter
-            best_ogs = res[&#39;best_ogs&#39;]
-            del res[&#39;best_ogs&#39;]
+            best_gs = res[&#39;best_gs&#39;]
+            del res[&#39;best_gs&#39;]
 
             if additional_keys:
                 res[&#39;best_sample&#39;] += sum(ns_samples[:best_proc])
@@ -3282,9 +3609,9 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
             print(f&#34;Done. Best: {res[f&#39;best_{overhead_key}&#39;]:.2f} &#34;
                   f&#34;({time.time() - t0:.2f} s)&#34;)
 
-        self.unraveled_graph = best_ogs.unraveled_graph
-        self.fusion_network = best_ogs.fusion_network
-        self.data = best_ogs.data
+        self.unraveled_graph = best_gs.unraveled_graph
+        self.fusion_network = best_gs.fusion_network
+        self.data = best_gs.data
 
         return res
 
@@ -3332,9 +3659,8 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
         Returns
         -------
         res : dict
-            Result of the iterations.
-
-            By default, only the information of the best sample is given.
+            Dictionary containing the results of the iterations.
+            See the description of `GraphState.simulate()` for its keys.
         &#34;&#34;&#34;
 
         if mp and n_procs is None:
@@ -3389,7 +3715,7 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
 
             if res is None:
                 res = res_now
-                best_ogs = self.copy()
+                best_gs = self.copy()
                 n_iter_now *= mul
 
             else:
@@ -3400,7 +3726,7 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
                     for key in additional_keys:
                         res_now[key] = res[key]
                     res = res_now
-                    best_ogs = self.copy()
+                    best_gs = self.copy()
 
                     n_iter_now *= mul
 
@@ -3419,9 +3745,9 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
         if additional_keys:
             res[&#39;best_sample&#39;] += res[&#39;best_sample&#39;]
 
-        self.unraveled_graph = best_ogs.unraveled_graph
-        self.fusion_network = best_ogs.fusion_network
-        self.data = best_ogs.data
+        self.unraveled_graph = best_gs.unraveled_graph
+        self.fusion_network = best_gs.fusion_network
+        self.data = best_gs.data
 
         return res
 
@@ -3552,10 +3878,16 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
         Get the Clifford gate applied to a vertex in the unraveled graph
         (by default) or the original graph.
 
-        Each Clifford gate is represented by a string. For example, `&#39;RX&#39;`
-        and `&#39;RZ&#39;` respectively mean pi/2 X-rotation (Z-rotation). If a qubit
-        is subjected to pi/2 X-rotation followed by pi/2 Z-rotation, it is
-        represented by `&#39;RX-RZ&#39;`.
+        Each Clifford gate is represented by a string. For example,
+
+        - `&#39;RX&#39;`: pi/2 X-rotation
+        - `&#39;RXd&#39;`: -pi/2 X-rotation
+        - `&#39;RZ&#39;`: pi/2 Z-rotation
+        - `&#39;RZd&#39;`: -pi/2 Z-rotation
+        (&#39;d&#39; means dagger)
+
+        If a qubit is subjected to pi/2 X-rotation followed by pi/2
+        Z-rotation, it is represented by `&#39;RX-RZ&#39;`.
 
         Parameters
         ----------
@@ -3583,10 +3915,16 @@ it is internally converted to <a href="https://python.igraph.org/en/stable/api/i
         Get the Clifford gates that need to be applied to two qubits involved
         in the fusion of a given link.
 
-        Each Clifford gate is represented by a string. For example, `&#39;RX&#39;` and
-        `&#39;RZ&#39;` respectively mean pi/2 X-rotation (Z-rotation). If a qubit is
-        subjected to pi/2 X-rotation followed by pi/2 Z-rotation, it is
-        represented by `&#39;RX-RZ&#39;`.
+        Each Clifford gate is represented by a string. For example,
+
+        - `&#39;RX&#39;`: pi/2 X-rotation
+        - `&#39;RXd&#39;`: -pi/2 X-rotation
+        - `&#39;RZ&#39;`: pi/2 Z-rotation
+        - `&#39;RZd&#39;`: -pi/2 Z-rotation
+        (&#39;d&#39; means dagger)
+
+        If a qubit is subjected to pi/2 X-rotation followed by pi/2
+        Z-rotation, it is represented by `&#39;RX-RZ&#39;`.
 
         Parameters
         ----------
@@ -4072,7 +4410,9 @@ building a fusion network.</dd>
 <span>def <span class="ident">calculate_overhead</span></span>(<span>self, p_succ=0.5, strategy='weight_and_matching', optimize_num_fusions=False, fusion_order=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Calculate the resource overhead from the fusion network.</p>
+<div class="desc"><p>Calculate the resource overhead (average number of basic resource
+states required to generate the desired graph state) from the fusion
+network.</p>
 <p><code><a title="optgraphstate.GraphState.build_fusion_network" href="#optgraphstate.GraphState.build_fusion_network">GraphState.build_fusion_network()</a></code> must be executed beforehand.</p>
 <p>The resulting data is saved in <code><a title="optgraphstate.GraphState.data" href="#optgraphstate.GraphState.data">GraphState.data</a></code>.</p>
 <h2 id="parameters">Parameters</h2>
@@ -4120,7 +4460,9 @@ The calculated overhead and number of steps can be obtained from
                        optimize_num_fusions=False,
                        fusion_order=None):
     &#34;&#34;&#34;
-    Calculate the resource overhead from the fusion network.
+    Calculate the resource overhead (average number of basic resource
+    states required to generate the desired graph state) from the fusion
+    network.
 
     `GraphState.build_fusion_network()` must be executed beforehand.
 
@@ -4131,7 +4473,7 @@ The calculated overhead and number of steps can be obtained from
     p_succ : float (default: 0.5)
         Success probability of a fusion.
 
-    strategy: str, one of [&#39;weight&#39;, &#39;matching&#39;, &#39;weight_and_matching&#39;, &#39;random&#39;] (default: &#39;weight_and_matching&#39;)
+    strategy : str, one of [&#39;weight&#39;, &#39;matching&#39;, &#39;weight_and_matching&#39;, &#39;random&#39;] (default: &#39;weight_and_matching&#39;)
         Strategy for determining the edge to contract.
 
         - `&#39;weight&#39;`: Contract a random one among the edges with the
@@ -4183,11 +4525,11 @@ The calculated overhead and number of steps can be obtained from
     else:
         is_fusion_order_given = True
 
+    self.fusion_network[&#39;p_succ&#39;] = p_succ
     self.fusion_network.es[&#39;order&#39;] = None
 
     # Initialize intermediate fusion network
     network = self.fusion_network.copy()
-    network[&#39;p_succ&#39;] = p_succ
     network.vs[&#39;weight&#39;] = 1
     network.vs[&#39;weight_f&#39;] = 0
     network.vs[&#39;order&#39;] = 0
@@ -4287,13 +4629,7 @@ The calculated overhead and number of steps can be obtained from
                 ename_to_merge = np.random.choice(enames_curr_step)
                 enames_curr_step.remove(ename_to_merge)
 
-            # if get_fusion_order:
-            #     e_to_merge = self.fusion_network.es.find(name=ename_to_merge)
-            #     v1, v2 = e_to_merge.source_vertex, e_to_merge.target_vertex
-            #     fusion_order_curr_step.add((v1[&#39;name&#39;], v2[&#39;name&#39;],
-            #                                 ename_to_merge))
-
-            enames_updated_weight \
+            _, _, enames_updated_weight \
                 = self._contract_edge(network,
                                       ename_to_merge)
 
@@ -4321,6 +4657,190 @@ The calculated overhead and number of steps can be obtained from
     self.data.update(results)
 
     return self.data.copy()</code></pre>
+</details>
+</dd>
+<dt id="optgraphstate.GraphState.calculate_succ_probs"><code class="name flex">
+<span>def <span class="ident">calculate_succ_probs</span></span>(<span>self, cutoff=0.95, auto_increasing_prec=True, prec=30, prec_interval=5, diff_overhead_thrs=0.01)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Calculate the success probability of the generation of the graph
+state for each resource count. In other words, get the cumulative mass
+function (CMF) of the resource count required to generate the state.</p>
+<p>The success probability is computed while increasing the resource
+count until the value reaches <code>cutoff</code> that is smaller than one.
+The estimated resource overhead, which is the expectation value of the
+resource count, is additionally returned.</p>
+<p>It uses the <code>decimal</code> module instead of float64 since the calculation
+involves the summation of many extremely small numbers thus
+floating-point errors may be detrimental.</p>
+<p>By default, it executes the computation multiple times while
+increasing the precision by 5 starting from 30. When the estimated
+overhead does not change by more than 1% in two consecutive trials, the
+iteration is terminated and the results of the final trial are returned.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>cutoff</code></strong> :&ensp;<code>float (default: 0.95)</code></dt>
+<dd>Cutoff threshold between 0 and 1.</dd>
+<dt><strong><code>auto_increasing_prec</code></strong> :&ensp;<code>bool (default: True)</code></dt>
+<dd>Whether to execute the computation multiple times. If it is False,
+the parameters <code>prec_interval</code> and <code>diff_overhead_thrs</code> are ignored.</dd>
+<dt><strong><code>prec</code></strong> :&ensp;<code>int (default: 30)</code></dt>
+<dd>Initial precision of numbers.</dd>
+<dt><strong><code>prec_interval</code></strong> :&ensp;<code>int (default: 5)</code></dt>
+<dd>Interval of precisions between two consecutive trials.</dd>
+<dt><strong><code>diff_overhead_thrs</code></strong> :&ensp;<code>float (default: 0.01)</code></dt>
+<dd>Threshold of the relative difference between the overheads estimated
+from two consecutive trials for determining the termination of the
+iteration. Namely, if the overheads are <code>o1</code> and <code>o2</code> in order, the
+iteration terminates when <code>abs(o1 - o2) / o2 &lt; diff_overhead_thrs</code>.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>resource_count_start</code></strong> :&ensp;<code>int</code></dt>
+<dd>First resource count that gives a nonzero probability.</dd>
+<dt><strong><code>probs</code></strong> :&ensp;<code>1D numpy array</code> of <code>decimal.Decimal</code></dt>
+<dd>Success probabilities for the resource counts starting from
+<code>resource_count_start</code>. <code>probs[i]</code> is the value corresponding to
+the resource count of <code>resource_count_start+i</code>.</dd>
+<dt><strong><code>overhead</code></strong> :&ensp;<code>decimal.Decimal</code></dt>
+<dd>Resource overhead estimated by the calculated probabilities.
+If <code>cutoff</code> is close enough to one, this value should not be
+significantly different from the correct one (<code>GraphState.data['overhead']</code>).</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def calculate_succ_probs(self,
+                         cutoff=0.95,
+                         auto_increasing_prec=True,
+                         prec=30,
+                         prec_interval=5,
+                         diff_overhead_thrs=0.01):
+    &#34;&#34;&#34;
+    Calculate the success probability of the generation of the graph
+    state for each resource count. In other words, get the cumulative mass
+    function (CMF) of the resource count required to generate the state.
+
+    The success probability is computed while increasing the resource
+    count until the value reaches `cutoff` that is smaller than one.
+    The estimated resource overhead, which is the expectation value of the
+    resource count, is additionally returned.
+
+    It uses the `decimal` module instead of float64 since the calculation
+    involves the summation of many extremely small numbers thus
+    floating-point errors may be detrimental.
+
+    By default, it executes the computation multiple times while
+    increasing the precision by 5 starting from 30. When the estimated
+    overhead does not change by more than 1% in two consecutive trials, the
+    iteration is terminated and the results of the final trial are returned.
+
+    Parameters
+    ----------
+    cutoff : float (default: 0.95)
+        Cutoff threshold between 0 and 1.
+    auto_increasing_prec : bool (default: True)
+        Whether to execute the computation multiple times. If it is False,
+        the parameters `prec_interval` and `diff_overhead_thrs` are ignored.
+    prec : int (default: 30)
+        Initial precision of numbers.
+    prec_interval : int (default: 5)
+        Interval of precisions between two consecutive trials.
+    diff_overhead_thrs : float (default: 0.01)
+        Threshold of the relative difference between the overheads estimated
+        from two consecutive trials for determining the termination of the
+        iteration. Namely, if the overheads are `o1` and `o2` in order, the
+        iteration terminates when `abs(o1 - o2) / o2 &lt; diff_overhead_thrs`.
+
+    Returns
+    -------
+    resource_count_start : int
+        First resource count that gives a nonzero probability.
+    probs : 1D numpy array of decimal.Decimal
+        Success probabilities for the resource counts starting from
+        `resource_count_start`. `probs[i]` is the value corresponding to
+        the resource count of `resource_count_start+i`.
+    overhead : decimal.Decimal
+        Resource overhead estimated by the calculated probabilities.
+        If `cutoff` is close enough to one, this value should not be
+        significantly different from the correct one (`GraphState.data[&#39;overhead&#39;]`).
+    &#34;&#34;&#34;
+
+    if self.fusion_network is None:
+        raise ValueError(&#34;No fusion network created&#34;)
+    if &#39;order&#39; not in self.fusion_network.edge_attributes():
+        raise ValueError(&#34;No fusion order data in the fusion network&#34;)
+
+    if not auto_increasing_prec:
+        network: ig.Graph = self.fusion_network.copy()
+
+        dec.getcontext().prec = prec
+        for v in network.vs:
+            v[&#39;ftpdf&#39;] = np.array([dec.Decimal(0), dec.Decimal(1)])
+
+        network.vs[&#39;on&#39;] = True
+        p_succ = network[&#39;p_succ&#39;]
+        orders = network.es[&#39;order&#39;]
+        num_steps = max(orders)
+
+        for order in range(1, num_steps + 1):
+            enames = network.es.select(order=order)[&#39;name&#39;]
+            for ename in enames:
+                link = network.es.find(name=ename)
+                node1, node2 = link.source_vertex, link.target_vertex
+                new_ftpdf = get_ftpdf_contracted(node1[&#39;ftpdf&#39;],
+                                                 node2[&#39;ftpdf&#39;],
+                                                 p_succ=p_succ)
+                v_merged, _, _ \
+                    = self._contract_edge(network,
+                                          ename,
+                                          update_weight_and_order=False)
+                v_merged[&#39;ftpdf&#39;] = new_ftpdf
+
+        ftpdfs_final = network.vs.select(on=True)[&#39;ftpdf&#39;]
+        while True:
+            if len(ftpdfs_final) == 1:
+                ftpdf_final = ftpdfs_final[0]
+                break
+
+            ftpdfs_final.append(scsig.convolve(ftpdfs_final[0],
+                                               ftpdfs_final[1]))
+            del ftpdfs_final[1], ftpdfs_final[0]
+
+        resource_count_start, probs \
+            = recover_cmf_from_ftpdf(ftpdf_final,
+                                     cutoff)
+
+        pmf = np.diff(probs)
+        overhead \
+            = np.sum(pmf * np.arange(resource_count_start,
+                                     resource_count_start + pmf.size))
+
+    else:
+        prev_overhead = None
+        while True:
+            print(f&#39;prec = {prec}: &#39;, end=&#39;&#39;)
+            try:
+                resource_count_start, probs, overhead \
+                    = self.calculate_succ_probs(cutoff=cutoff,
+                                                auto_increasing_prec=False,
+                                                prec=prec)
+            except ValueError:
+                print(&#39;Error&#39;)
+                prec += prec_interval
+                continue
+
+            if prev_overhead is not None \
+                    and abs(overhead - prev_overhead) / overhead &lt; diff_overhead_thrs:
+                print(overhead)
+                break
+
+            print(overhead)
+            prec += prec_interval
+            prev_overhead = overhead
+
+    return resource_count_start, probs, overhead</code></pre>
 </details>
 </dd>
 <dt id="optgraphstate.GraphState.copy"><code class="name flex">
@@ -4531,10 +5051,16 @@ qubit, and <code>cl</code> is the Clifford gate applied to the qubit.</p>
 <dd>
 <div class="desc"><p>Get the Clifford gates that need to be applied to two qubits involved
 in the fusion of a given link.</p>
-<p>Each Clifford gate is represented by a string. For example, <code>'RX'</code> and
-<code>'RZ'</code> respectively mean pi/2 X-rotation (Z-rotation). If a qubit is
-subjected to pi/2 X-rotation followed by pi/2 Z-rotation, it is
-represented by <code>'RX-RZ'</code>.</p>
+<p>Each Clifford gate is represented by a string. For example,</p>
+<ul>
+<li><code>'RX'</code>: pi/2 X-rotation</li>
+<li><code>'RXd'</code>: -pi/2 X-rotation</li>
+<li><code>'RZ'</code>: pi/2 Z-rotation</li>
+<li><code>'RZd'</code>: -pi/2 Z-rotation
+('d' means dagger)</li>
+</ul>
+<p>If a qubit is subjected to pi/2 X-rotation followed by pi/2
+Z-rotation, it is represented by <code>'RX-RZ'</code>.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>n1</code></strong>, <strong><code>n2</code></strong> :&ensp;<code>int</code> or <code>str</code></dt>
@@ -4555,10 +5081,16 @@ of the link.</dd>
     Get the Clifford gates that need to be applied to two qubits involved
     in the fusion of a given link.
 
-    Each Clifford gate is represented by a string. For example, `&#39;RX&#39;` and
-    `&#39;RZ&#39;` respectively mean pi/2 X-rotation (Z-rotation). If a qubit is
-    subjected to pi/2 X-rotation followed by pi/2 Z-rotation, it is
-    represented by `&#39;RX-RZ&#39;`.
+    Each Clifford gate is represented by a string. For example,
+
+    - `&#39;RX&#39;`: pi/2 X-rotation
+    - `&#39;RXd&#39;`: -pi/2 X-rotation
+    - `&#39;RZ&#39;`: pi/2 Z-rotation
+    - `&#39;RZd&#39;`: -pi/2 Z-rotation
+    (&#39;d&#39; means dagger)
+
+    If a qubit is subjected to pi/2 X-rotation followed by pi/2
+    Z-rotation, it is represented by `&#39;RX-RZ&#39;`.
 
     Parameters
     ----------
@@ -4594,10 +5126,16 @@ of the link.</dd>
 <dd>
 <div class="desc"><p>Get the Clifford gate applied to a vertex in the unraveled graph
 (by default) or the original graph.</p>
-<p>Each Clifford gate is represented by a string. For example, <code>'RX'</code>
-and <code>'RZ'</code> respectively mean pi/2 X-rotation (Z-rotation). If a qubit
-is subjected to pi/2 X-rotation followed by pi/2 Z-rotation, it is
-represented by <code>'RX-RZ'</code>.</p>
+<p>Each Clifford gate is represented by a string. For example,</p>
+<ul>
+<li><code>'RX'</code>: pi/2 X-rotation</li>
+<li><code>'RXd'</code>: -pi/2 X-rotation</li>
+<li><code>'RZ'</code>: pi/2 Z-rotation</li>
+<li><code>'RZd'</code>: -pi/2 Z-rotation
+('d' means dagger)</li>
+</ul>
+<p>If a qubit is subjected to pi/2 X-rotation followed by pi/2
+Z-rotation, it is represented by <code>'RX-RZ'</code>.</p>
 <h2 id="parameters">Parameters</h2>
 <dl>
 <dt><strong><code>vertex</code></strong> :&ensp;<code>int</code> or <code>str</code></dt>
@@ -4619,10 +5157,16 @@ represented by <code>'RX-RZ'</code>.</p>
     Get the Clifford gate applied to a vertex in the unraveled graph
     (by default) or the original graph.
 
-    Each Clifford gate is represented by a string. For example, `&#39;RX&#39;`
-    and `&#39;RZ&#39;` respectively mean pi/2 X-rotation (Z-rotation). If a qubit
-    is subjected to pi/2 X-rotation followed by pi/2 Z-rotation, it is
-    represented by `&#39;RX-RZ&#39;`.
+    Each Clifford gate is represented by a string. For example,
+
+    - `&#39;RX&#39;`: pi/2 X-rotation
+    - `&#39;RXd&#39;`: -pi/2 X-rotation
+    - `&#39;RZ&#39;`: pi/2 Z-rotation
+    - `&#39;RZd&#39;`: -pi/2 Z-rotation
+    (&#39;d&#39; means dagger)
+
+    If a qubit is subjected to pi/2 X-rotation followed by pi/2
+    Z-rotation, it is represented by `&#39;RX-RZ&#39;`.
 
     Parameters
     ----------
@@ -5007,8 +5551,8 @@ the edges with the smallest weight.</li>
 <li><code>'random'</code>: Contract a random edge.</li>
 </ul>
 </dd>
-<dt><strong><code>optimize_num_fusions</code></strong> :&ensp;<code>bool</code></dt>
-<dd>If <code>True</code>, use the averagte number of fusion attempts to quantify
+<dt><strong><code>optimize_num_fusions</code></strong> :&ensp;<code>bool (default: False)</code></dt>
+<dd>If <code>True</code>, use the average number of fusion attempts to quantify
 resource overheads instead of the average number of basic resource
 states.</dd>
 <dt><strong><code>seed</code></strong> :&ensp;<code>'keep'</code> or <code>None</code> or <code>int (default: 'keep')</code></dt>
@@ -5040,8 +5584,28 @@ used as the random seed for the (only one) iteration itself.</p>
 <dl>
 <dt><strong><code>res</code></strong> :&ensp;<code>dict</code></dt>
 <dd>
-<p>Result of the iterations.</p>
-<p>By default, only the information of the best sample is returned.</p>
+<p>Dictionary containing the results of the iterations with keys:</p>
+<ul>
+<li><code>'best_overhead'</code>: Overhead of the best sample (i.e., sample with
+the smallest overhead or avg fusion number, determined by parameter
+<code>optimize_num_fusions</code>).</li>
+<li><code>'best_num_fusions'</code>: Average number of fusions of the best sample.</li>
+<li><code>'best_num_steps'</code>: Number of steps (i.e., groups of fusions that
+can be done in parallel) of the best sample.</li>
+<li><code>'best_seed'</code>: Random seed for the best sample. To recover the
+sample from it, use the <code>seed</code> parameter of <code><a title="optgraphstate.GraphState.simulate" href="#optgraphstate.GraphState.simulate">GraphState.simulate()</a></code>
+with <code>n_iter=1</code>.</li>
+<li><code>'n_iter'</code>: Number of iterations. Same as parameter <code>n_iter</code>.</li>
+<li><code>'unravel_bcs_first'</code>: Whether to unravel BCSs or cliques first
+for the best sample.</li>
+<li><code>'overheads'</code>, <code>'nums_fusions'</code>, <code>'nums_steps'</code>, <code>'seeds'</code>: Lists
+of the overheads, avg fusion numbers, step numbers, and seeds of
+all samples, respectively. Exist only when <code>get_all_data==True</code>.</li>
+<li><code>'unraveled_graphs'</code>: List of the unraveled graphs of all
+samples. Exists only when <code>get_all_graphs==True</code>.</li>
+<li><code>'fusion_networks'</code>: List of the fusion networks of all samples.
+Exists only when <code>get_all_fusion_networks==True</code>.</li>
+</ul>
 </dd>
 </dl></div>
 <details class="source">
@@ -5123,8 +5687,8 @@ used as the random seed for the (only one) iteration itself.</p>
         the edges with the smallest weight.
         - `&#39;random&#39;`: Contract a random edge.
 
-    optimize_num_fusions : bool
-        If `True`, use the averagte number of fusion attempts to quantify
+    optimize_num_fusions : bool (default: False)
+        If `True`, use the average number of fusion attempts to quantify
         resource overheads instead of the average number of basic resource
         states.
 
@@ -5155,9 +5719,27 @@ used as the random seed for the (only one) iteration itself.</p>
     Returns
     -------
     res : dict
-        Result of the iterations.
+        Dictionary containing the results of the iterations with keys:
 
-        By default, only the information of the best sample is returned.
+        - `&#39;best_overhead&#39;`: Overhead of the best sample (i.e., sample with
+        the smallest overhead or avg fusion number, determined by parameter
+        `optimize_num_fusions`).
+        - `&#39;best_num_fusions&#39;`: Average number of fusions of the best sample.
+        - `&#39;best_num_steps&#39;`: Number of steps (i.e., groups of fusions that
+         can be done in parallel) of the best sample.
+        - `&#39;best_seed&#39;`: Random seed for the best sample. To recover the
+        sample from it, use the `seed` parameter of `GraphState.simulate()`
+        with `n_iter=1`.
+        - `&#39;n_iter&#39;`: Number of iterations. Same as parameter `n_iter`.
+        - `&#39;unravel_bcs_first&#39;`: Whether to unravel BCSs or cliques first
+        for the best sample.
+        - `&#39;overheads&#39;`, `&#39;nums_fusions&#39;`, `&#39;nums_steps&#39;`, `&#39;seeds&#39;`: Lists
+        of the overheads, avg fusion numbers, step numbers, and seeds of 
+        all samples, respectively. Exist only when `get_all_data==True`.
+        - `&#39;unraveled_graphs&#39;`: List of the unraveled graphs of all 
+        samples. Exists only when `get_all_graphs==True`.
+        - `&#39;fusion_networks&#39;`: List of the fusion networks of all samples.
+        Exists only when `get_all_fusion_networks==True`.
     &#34;&#34;&#34;
 
     t0 = time.time()
@@ -5229,7 +5811,7 @@ used as the random seed for the (only one) iteration itself.</p>
             if lowest_overhead is None or overhead_now &lt; lowest_overhead:
                 best_sample = i_sample
                 lowest_overhead = overhead_now
-                best_ogs = self.copy()
+                best_gs = self.copy()
 
             if get_all_data:
                 overheads.append(data_now[&#39;overhead&#39;])
@@ -5244,14 +5826,14 @@ used as the random seed for the (only one) iteration itself.</p>
                 fusion_networks.append(self.fusion_network)
 
         res = {
-            &#39;best_overhead&#39;: best_ogs.data[&#39;overhead&#39;],
-            &#39;best_num_fusions&#39;: best_ogs.data[&#39;num_fusions&#39;],
-            &#39;best_num_steps&#39;: best_ogs.data[&#39;num_steps&#39;],
-            &#39;best_seed&#39;: best_ogs.data[&#39;seed&#39;],
+            &#39;best_overhead&#39;: best_gs.data[&#39;overhead&#39;],
+            &#39;best_num_fusions&#39;: best_gs.data[&#39;num_fusions&#39;],
+            &#39;best_num_steps&#39;: best_gs.data[&#39;num_steps&#39;],
+            &#39;best_seed&#39;: best_gs.data[&#39;seed&#39;],
             &#39;n_iter&#39;: n_iter}
 
         if unravel:
-            res[&#39;unravel_bcs_first&#39;] = best_ogs.data[&#39;unravel_bcs_first&#39;]
+            res[&#39;unravel_bcs_first&#39;] = best_gs.data[&#39;unravel_bcs_first&#39;]
 
         if get_all_data or get_all_graphs or get_all_fusion_networks:
             res[&#39;best_sample&#39;] = best_sample
@@ -5311,8 +5893,8 @@ used as the random seed for the (only one) iteration itself.</p>
         )
         res = res_procs[best_proc]
         res[&#39;n_iter&#39;] = n_iter
-        best_ogs = res[&#39;best_ogs&#39;]
-        del res[&#39;best_ogs&#39;]
+        best_gs = res[&#39;best_gs&#39;]
+        del res[&#39;best_gs&#39;]
 
         if additional_keys:
             res[&#39;best_sample&#39;] += sum(ns_samples[:best_proc])
@@ -5325,9 +5907,9 @@ used as the random seed for the (only one) iteration itself.</p>
         print(f&#34;Done. Best: {res[f&#39;best_{overhead_key}&#39;]:.2f} &#34;
               f&#34;({time.time() - t0:.2f} s)&#34;)
 
-    self.unraveled_graph = best_ogs.unraveled_graph
-    self.fusion_network = best_ogs.fusion_network
-    self.data = best_ogs.data
+    self.unraveled_graph = best_gs.unraveled_graph
+    self.fusion_network = best_gs.fusion_network
+    self.data = best_gs.data
 
     return res</code></pre>
 </details>
@@ -5358,10 +5940,8 @@ is executed, and so on.</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><strong><code>res</code></strong> :&ensp;<code>dict</code></dt>
-<dd>
-<p>Result of the iterations.</p>
-<p>By default, only the information of the best sample is given.</p>
-</dd>
+<dd>Dictionary containing the results of the iterations.
+See the description of <code><a title="optgraphstate.GraphState.simulate" href="#optgraphstate.GraphState.simulate">GraphState.simulate()</a></code> for its keys.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -5411,9 +5991,8 @@ is executed, and so on.</p>
     Returns
     -------
     res : dict
-        Result of the iterations.
-
-        By default, only the information of the best sample is given.
+        Dictionary containing the results of the iterations.
+        See the description of `GraphState.simulate()` for its keys.
     &#34;&#34;&#34;
 
     if mp and n_procs is None:
@@ -5468,7 +6047,7 @@ is executed, and so on.</p>
 
         if res is None:
             res = res_now
-            best_ogs = self.copy()
+            best_gs = self.copy()
             n_iter_now *= mul
 
         else:
@@ -5479,7 +6058,7 @@ is executed, and so on.</p>
                 for key in additional_keys:
                     res_now[key] = res[key]
                 res = res_now
-                best_ogs = self.copy()
+                best_gs = self.copy()
 
                 n_iter_now *= mul
 
@@ -5498,9 +6077,9 @@ is executed, and so on.</p>
     if additional_keys:
         res[&#39;best_sample&#39;] += res[&#39;best_sample&#39;]
 
-    self.unraveled_graph = best_ogs.unraveled_graph
-    self.fusion_network = best_ogs.fusion_network
-    self.data = best_ogs.data
+    self.unraveled_graph = best_gs.unraveled_graph
+    self.fusion_network = best_gs.fusion_network
+    self.data = best_gs.data
 
     return res</code></pre>
 </details>
@@ -5768,7 +6347,7 @@ non-overlapping cliques.</p>
             apply_clifford(v_LC, &#39;RX&#39;)
             for adj_vname in adj_vnames:
                 adj_v = graph.vs.find(name=adj_vname)
-                apply_clifford(adj_v, &#39;RZ&#39;)
+                apply_clifford(adj_v, &#39;RZd&#39;)
 
             new_eids_to_delete = [graph.get_eid(vname1, vname2) for
                                   vname1, vname2 in
@@ -5915,6 +6494,7 @@ non-overlapping cliques.</p>
 <ul class="">
 <li><code><a title="optgraphstate.GraphState.build_fusion_network" href="#optgraphstate.GraphState.build_fusion_network">build_fusion_network</a></code></li>
 <li><code><a title="optgraphstate.GraphState.calculate_overhead" href="#optgraphstate.GraphState.calculate_overhead">calculate_overhead</a></code></li>
+<li><code><a title="optgraphstate.GraphState.calculate_succ_probs" href="#optgraphstate.GraphState.calculate_succ_probs">calculate_succ_probs</a></code></li>
 <li><code><a title="optgraphstate.GraphState.copy" href="#optgraphstate.GraphState.copy">copy</a></code></li>
 <li><code><a title="optgraphstate.GraphState.data" href="#optgraphstate.GraphState.data">data</a></code></li>
 <li><code><a title="optgraphstate.GraphState.fusion_network" href="#optgraphstate.GraphState.fusion_network">fusion_network</a></code></li>

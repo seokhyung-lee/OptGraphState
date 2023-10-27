@@ -141,8 +141,8 @@ class GraphState:
             (Orientation 2).
                 - `prms[0]` <`str` or `igraph.Graph`> : Logical-level graph
                 given by either its name or graph structure. Currently 3-star
-                (`"3-star"` or `"3-linear"') and 6-cycle (`"6-cycle"' or
-                `"6-ring"') graphs can be given by their names. For the other
+                (`"3-star"` or `"3-linear"`) and 6-cycle (`"6-cycle"` or
+                `"6-ring"`) graphs can be given by their names. For the other
                 graphs, it should be given by an `igraph.Graph` object. It
                  can be generated directly via python-igraph library or from
                  the function `optgraphstate.graph_tools.get_graph_from_edges()` or

@@ -28,6 +28,119 @@
 </summary>
 <pre><code class="python">import logging
 import time
+import numpy as np
+import scipy.signal as scsig
+import scipy.special as scsp
+import decimal as dec
+import math
+import sympy as sp
+
+
+def get_ftpdf_contracted(ftpdf1, ftpdf2, p_succ=0.5):
+    &#34;&#34;&#34;
+    Compute the fourier-transformed probability distribution functions (FTPDF)
+    of the resource count of a new node created by contracting a link of a
+    fusion network from the FTPDFs of the two endpoints of the link.
+
+    High-precision calculation with the `decimal` package is supported.
+
+    Parameters
+    ----------
+    ftpdf1 : 1D array-like of float or decimal.Decimal
+        FTPDF (with variable k) of an endpoint of the contracted link, which is
+        the inverse of the polynomial of x=exp(2πik) where the coefficient for
+        x^j is `ftpdf1[j]`.
+    ftpdf2 : 1D array-like of float or decimal.Decimal
+        FTPDF of the other endpoint expressed in the same way as above.
+    p_succ : float (default: 0.5)
+        Success probability of a single fusion.
+
+    Returns
+    -------
+    ftpdf_cont : 1D numpy array of float or decimal.Decimal
+        FTPDF of the new node created by contracting the link, expressed in
+        the same way as `ftpdf1` and `ftpdf2`.
+    &#34;&#34;&#34;
+    ftpdf1 = np.asanyarray(ftpdf1)
+    ftpdf2 = np.asanyarray(ftpdf2)
+
+    if isinstance(ftpdf1[0], dec.Decimal):
+        p_succ = dec.Decimal(str(p_succ))
+
+    ftpdf_cont = scsig.convolve(ftpdf1, ftpdf2) / p_succ
+    ftpdf_cont[0] -= (1 - p_succ) / p_succ
+
+    return ftpdf_cont
+
+
+def recover_cmf_from_ftpdf(ftpdf,
+                           cutoff,
+                           raise_error_when_invalid_prob=True):
+    &#34;&#34;&#34;
+    Recover the cumulative mass function (CMF) of the resource count for a node
+    in a fusion network from its fourier-transformed probability distribution
+    functions (FTPDF).
+
+    High-precision calculation with the `decimal` package is supported.
+
+    Parameters
+    ----------
+    ftpdf : 1D array-like of float or decimal.Decimal
+        FTPDF (with variable k) of a node of a fusion network, which is
+        the inverse of the polynomial of x=exp(2πik) where the coefficient for
+        x^j is `ftpdf[j]`.
+    cutoff : float (default: 0.95)
+        Cutoff threshold between 0 and 1.
+        The CMF is computed until it exceeds the given threshold.
+    raise_error_when_invalid_prob : bool (default: True)
+        Whether to raise an error when the calculated probability is invalid.
+
+    Returns
+    -------
+    L : int
+        First resource count that gives a nonzero probability.
+    cmfs : 1D numpy array of float or decimal.Decimal
+        CMF values for the resource counts starting from `m_start`.
+        `cmfs[i]` is the value corresponding to the resource count of `m_start+i`.
+    &#34;&#34;&#34;
+    assert 0 &lt; cutoff &lt; 1
+
+    ftpdf = np.asanyarray(ftpdf)
+    decimal = isinstance(ftpdf[0], dec.Decimal)
+
+    L = ftpdf.size - 1
+    rescale_factor = ftpdf[-1]
+
+    ftpdf_diff = np.insert(np.diff(ftpdf), 0, ftpdf[0])
+    ftpdf_diff_res = ftpdf_diff / rescale_factor
+
+    one = dec.Decimal(&#39;1&#39;) if decimal else 1.
+    cmfs = np.array([one, one])
+
+    cutoff = dec.Decimal(str(cutoff)) if decimal else cutoff
+    cutoff_rescaled = cutoff * rescale_factor
+
+    summ = np.sum if decimal else math.fsum
+    n = 2
+    prev_cmf = 0
+    while True:
+        cmf = summ(ftpdf_diff_res[max(L - n + 1, 0):]
+                   * cmfs[max(n - L - 1, 0):])
+
+        if raise_error_when_invalid_prob \
+                and (cmf &lt; 0 or cmf &gt; rescale_factor or cmf &lt; prev_cmf):
+            raise ValueError(&#34;Invalid probability. Use a higher precision.&#34;)
+
+        cmfs = np.append(cmfs, cmf)
+        if cmfs[-1] &gt;= cutoff_rescaled:
+            break
+
+        n += 1
+        prev_cmf = cmf
+
+    cmfs /= rescale_factor
+
+    return L, cmfs
 
 
 def set_log(fname):
@@ -60,6 +173,72 @@ def logging_time(original_fn):
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
+<dt id="optgraphstate.utils.get_ftpdf_contracted"><code class="name flex">
+<span>def <span class="ident">get_ftpdf_contracted</span></span>(<span>ftpdf1, ftpdf2, p_succ=0.5)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Compute the fourier-transformed probability distribution functions (FTPDF)
+of the resource count of a new node created by contracting a link of a
+fusion network from the FTPDFs of the two endpoints of the link.</p>
+<p>High-precision calculation with the <code>decimal</code> package is supported.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>ftpdf1</code></strong> :&ensp;<code>1D array-like</code> of <code>float</code> or <code>decimal.Decimal</code></dt>
+<dd>FTPDF (with variable k) of an endpoint of the contracted link, which is
+the inverse of the polynomial of x=exp(2πik) where the coefficient for
+x^j is <code>ftpdf1[j]</code>.</dd>
+<dt><strong><code>ftpdf2</code></strong> :&ensp;<code>1D array-like</code> of <code>float</code> or <code>decimal.Decimal</code></dt>
+<dd>FTPDF of the other endpoint expressed in the same way as above.</dd>
+<dt><strong><code>p_succ</code></strong> :&ensp;<code>float (default: 0.5)</code></dt>
+<dd>Success probability of a single fusion.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>ftpdf_cont</code></strong> :&ensp;<code>1D numpy array</code> of <code>float</code> or <code>decimal.Decimal</code></dt>
+<dd>FTPDF of the new node created by contracting the link, expressed in
+the same way as <code>ftpdf1</code> and <code>ftpdf2</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_ftpdf_contracted(ftpdf1, ftpdf2, p_succ=0.5):
+    &#34;&#34;&#34;
+    Compute the fourier-transformed probability distribution functions (FTPDF)
+    of the resource count of a new node created by contracting a link of a
+    fusion network from the FTPDFs of the two endpoints of the link.
+
+    High-precision calculation with the `decimal` package is supported.
+
+    Parameters
+    ----------
+    ftpdf1 : 1D array-like of float or decimal.Decimal
+        FTPDF (with variable k) of an endpoint of the contracted link, which is
+        the inverse of the polynomial of x=exp(2πik) where the coefficient for
+        x^j is `ftpdf1[j]`.
+    ftpdf2 : 1D array-like of float or decimal.Decimal
+        FTPDF of the other endpoint expressed in the same way as above.
+    p_succ : float (default: 0.5)
+        Success probability of a single fusion.
+
+    Returns
+    -------
+    ftpdf_cont : 1D numpy array of float or decimal.Decimal
+        FTPDF of the new node created by contracting the link, expressed in
+        the same way as `ftpdf1` and `ftpdf2`.
+    &#34;&#34;&#34;
+    ftpdf1 = np.asanyarray(ftpdf1)
+    ftpdf2 = np.asanyarray(ftpdf2)
+
+    if isinstance(ftpdf1[0], dec.Decimal):
+        p_succ = dec.Decimal(str(p_succ))
+
+    ftpdf_cont = scsig.convolve(ftpdf1, ftpdf2) / p_succ
+    ftpdf_cont[0] -= (1 - p_succ) / p_succ
+
+    return ftpdf_cont</code></pre>
+</details>
+</dd>
 <dt id="optgraphstate.utils.logging_time"><code class="name flex">
 <span>def <span class="ident">logging_time</span></span>(<span>original_fn)</span>
 </code></dt>
@@ -79,6 +258,108 @@ def logging_time(original_fn):
         return result
 
     return wrapper_fn</code></pre>
+</details>
+</dd>
+<dt id="optgraphstate.utils.recover_cmf_from_ftpdf"><code class="name flex">
+<span>def <span class="ident">recover_cmf_from_ftpdf</span></span>(<span>ftpdf, cutoff, raise_error_when_invalid_prob=True)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Recover the cumulative mass function (CMF) of the resource count for a node
+in a fusion network from its fourier-transformed probability distribution
+functions (FTPDF).</p>
+<p>High-precision calculation with the <code>decimal</code> package is supported.</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>ftpdf</code></strong> :&ensp;<code>1D array-like</code> of <code>float</code> or <code>decimal.Decimal</code></dt>
+<dd>FTPDF (with variable k) of a node of a fusion network, which is
+the inverse of the polynomial of x=exp(2πik) where the coefficient for
+x^j is <code>ftpdf[j]</code>.</dd>
+<dt><strong><code>cutoff</code></strong> :&ensp;<code>float (default: 0.95)</code></dt>
+<dd>Cutoff threshold between 0 and 1.
+The CMF is computed until it exceeds the given threshold.</dd>
+<dt><strong><code>raise_error_when_invalid_prob</code></strong> :&ensp;<code>bool (default: True)</code></dt>
+<dd>Whether to raise an error when the calculated probability is invalid.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>L</code></strong> :&ensp;<code>int</code></dt>
+<dd>First resource count that gives a nonzero probability.</dd>
+<dt><strong><code>cmfs</code></strong> :&ensp;<code>1D numpy array</code> of <code>float</code> or <code>decimal.Decimal</code></dt>
+<dd>CMF values for the resource counts starting from <code>m_start</code>.
+<code>cmfs[i]</code> is the value corresponding to the resource count of <code>m_start+i</code>.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def recover_cmf_from_ftpdf(ftpdf,
+                           cutoff,
+                           raise_error_when_invalid_prob=True):
+    &#34;&#34;&#34;
+    Recover the cumulative mass function (CMF) of the resource count for a node
+    in a fusion network from its fourier-transformed probability distribution
+    functions (FTPDF).
+
+    High-precision calculation with the `decimal` package is supported.
+
+    Parameters
+    ----------
+    ftpdf : 1D array-like of float or decimal.Decimal
+        FTPDF (with variable k) of a node of a fusion network, which is
+        the inverse of the polynomial of x=exp(2πik) where the coefficient for
+        x^j is `ftpdf[j]`.
+    cutoff : float (default: 0.95)
+        Cutoff threshold between 0 and 1.
+        The CMF is computed until it exceeds the given threshold.
+    raise_error_when_invalid_prob : bool (default: True)
+        Whether to raise an error when the calculated probability is invalid.
+
+    Returns
+    -------
+    L : int
+        First resource count that gives a nonzero probability.
+    cmfs : 1D numpy array of float or decimal.Decimal
+        CMF values for the resource counts starting from `m_start`.
+        `cmfs[i]` is the value corresponding to the resource count of `m_start+i`.
+    &#34;&#34;&#34;
+    assert 0 &lt; cutoff &lt; 1
+
+    ftpdf = np.asanyarray(ftpdf)
+    decimal = isinstance(ftpdf[0], dec.Decimal)
+
+    L = ftpdf.size - 1
+    rescale_factor = ftpdf[-1]
+
+    ftpdf_diff = np.insert(np.diff(ftpdf), 0, ftpdf[0])
+    ftpdf_diff_res = ftpdf_diff / rescale_factor
+
+    one = dec.Decimal(&#39;1&#39;) if decimal else 1.
+    cmfs = np.array([one, one])
+
+    cutoff = dec.Decimal(str(cutoff)) if decimal else cutoff
+    cutoff_rescaled = cutoff * rescale_factor
+
+    summ = np.sum if decimal else math.fsum
+    n = 2
+    prev_cmf = 0
+    while True:
+        cmf = summ(ftpdf_diff_res[max(L - n + 1, 0):]
+                   * cmfs[max(n - L - 1, 0):])
+
+        if raise_error_when_invalid_prob \
+                and (cmf &lt; 0 or cmf &gt; rescale_factor or cmf &lt; prev_cmf):
+            raise ValueError(&#34;Invalid probability. Use a higher precision.&#34;)
+
+        cmfs = np.append(cmfs, cmf)
+        if cmfs[-1] &gt;= cutoff_rescaled:
+            break
+
+        n += 1
+        prev_cmf = cmf
+
+    cmfs /= rescale_factor
+
+    return L, cmfs</code></pre>
 </details>
 </dd>
 <dt id="optgraphstate.utils.set_log"><code class="name flex">
@@ -119,7 +400,9 @@ def logging_time(original_fn):
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
+<li><code><a title="optgraphstate.utils.get_ftpdf_contracted" href="#optgraphstate.utils.get_ftpdf_contracted">get_ftpdf_contracted</a></code></li>
 <li><code><a title="optgraphstate.utils.logging_time" href="#optgraphstate.utils.logging_time">logging_time</a></code></li>
+<li><code><a title="optgraphstate.utils.recover_cmf_from_ftpdf" href="#optgraphstate.utils.recover_cmf_from_ftpdf">recover_cmf_from_ftpdf</a></code></li>
 <li><code><a title="optgraphstate.utils.set_log" href="#optgraphstate.utils.set_log">set_log</a></code></li>
 </ul>
 </li>
