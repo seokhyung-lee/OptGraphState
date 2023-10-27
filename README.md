@@ -1,6 +1,6 @@
 # OptGraphState
 
-**Version 0.2.0**
+**Version 0.3.0**
 
 *Graph-theoretical optimization of fusion-based graph state generation.*
 
@@ -14,6 +14,8 @@ The package has the following features:
   resource states, which are three-qubit linear graph states.
 - Computing the corresponding resource overhead, which is quantified by the average number of required basic resource
   states or fusion attempts.
+- Computing the success probability of graph state generation when the number of provided basic resource states is
+  limited.
 - Visualizing the original graph (of the graph state you want to generate), unraveled graphs, and fusion networks. An
   unraveled graph is a simplified graph where the corresponding graph state is equivalent to the desired graph state up
   to fusions and single-qubit Clifford operations. A fusion network is a graph that instructs the fusions between basic
