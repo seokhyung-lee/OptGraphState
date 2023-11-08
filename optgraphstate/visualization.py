@@ -126,6 +126,7 @@ def plot_fusion_network(network,
                         layout='auto',
                         figsize=(5, 5),
                         save=None,
+                        show_only_structure=False,
                         show_node_names=True,
                         node_color='white',
                         show_link_names=False,
@@ -160,6 +161,12 @@ def plot_fusion_network(network,
 
     if not isinstance(network, ig.Graph):
         raise TypeError("Parameter 'network' is not ig.Graph.")
+
+    if show_only_structure:
+        show_node_names = False
+        show_link_names = False
+        show_fusion_orders = False
+        show_link_cliffords = False
 
     # show_vertex_overhead = show_vertex_overhead and 'overhead' in
     # network.vs.attributes()

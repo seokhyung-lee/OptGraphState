@@ -154,6 +154,7 @@ def plot_fusion_network(network,
                         layout=&#39;auto&#39;,
                         figsize=(5, 5),
                         save=None,
+                        show_only_structure=False,
                         show_node_names=True,
                         node_color=&#39;white&#39;,
                         show_link_names=False,
@@ -188,6 +189,12 @@ def plot_fusion_network(network,
 
     if not isinstance(network, ig.Graph):
         raise TypeError(&#34;Parameter &#39;network&#39; is not ig.Graph.&#34;)
+
+    if show_only_structure:
+        show_node_names = False
+        show_link_names = False
+        show_fusion_orders = False
+        show_link_cliffords = False
 
     # show_vertex_overhead = show_vertex_overhead and &#39;overhead&#39; in
     # network.vs.attributes()
@@ -325,7 +332,7 @@ def plot_fusion_network(network,
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="optgraphstate.visualization.plot_fusion_network"><code class="name flex">
-<span>def <span class="ident">plot_fusion_network</span></span>(<span>network, ax=None, layout='auto', figsize=(5, 5), save=None, show_node_names=True, node_color='white', show_link_names=False, show_fusion_orders=True, show_link_cliffords=True, link_color_ll='black', link_color_rl='blue', link_color_rr='red', arrow_size=0.02, **kwargs)</span>
+<span>def <span class="ident">plot_fusion_network</span></span>(<span>network, ax=None, layout='auto', figsize=(5, 5), save=None, show_only_structure=False, show_node_names=True, node_color='white', show_link_names=False, show_fusion_orders=True, show_link_cliffords=True, link_color_ll='black', link_color_rl='blue', link_color_rr='red', arrow_size=0.02, **kwargs)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Plot a fusion network.</p>
@@ -347,6 +354,7 @@ for details.</p>
                         layout=&#39;auto&#39;,
                         figsize=(5, 5),
                         save=None,
+                        show_only_structure=False,
                         show_node_names=True,
                         node_color=&#39;white&#39;,
                         show_link_names=False,
@@ -381,6 +389,12 @@ for details.</p>
 
     if not isinstance(network, ig.Graph):
         raise TypeError(&#34;Parameter &#39;network&#39; is not ig.Graph.&#34;)
+
+    if show_only_structure:
+        show_node_names = False
+        show_link_names = False
+        show_fusion_orders = False
+        show_link_cliffords = False
 
     # show_vertex_overhead = show_vertex_overhead and &#39;overhead&#39; in
     # network.vs.attributes()

@@ -1,5 +1,5 @@
 """
-**Version 0.3.0**
+**Version 0.3.1**
 
 **OptGraphState** is a python package that implements the graph-theoretical
 strategy to optimize the fusion-based generation of any graph state, which is
@@ -39,6 +39,11 @@ from .utils import *
 
 try:
     import parmap
+except ModuleNotFoundError:
+    pass
+
+try:
+    import tqdm
 except ModuleNotFoundError:
     pass
 
@@ -290,6 +295,8 @@ class GraphState:
             `cliques[i][j]` is the set of the names of the vertices in the
             `j`-th clique obtained by the `i`-th cycle of finding
             non-overlapping cliques.
+        unravel_bcs_first : bool
+            Whether BCSs are unraveled first or not.
         """
 
         if unravel_bcs_first == 'random':
@@ -311,7 +318,7 @@ class GraphState:
         self.data['unravel'] = True
         self.data['unravel_bcs_first'] = unravel_bcs_first
 
-        return bcss, cliques
+        return bcss, cliques, unravel_bcs_first
 
     def unravel_bcss(self, verbose=False):
         """
@@ -482,52 +489,55 @@ class GraphState:
                     vname_LC = np.random.choice(vname_LC)
                 else:
                     vname_LC = vname_LC[0]
-                v_LC = graph.vs.find(name=vname_LC)
+                old_v_LC = graph.vs.find(name=vname_LC)
 
                 # Separate the edges (E) incident to v_LC outside the clique
                 # from v_LC
                 eids_to_delete = []
                 if need_to_separate:
-                    # Vertex connected with E
-                    new_v1 = graph.add_vertex(name=str(graph.vcount()),
-                                              clifford=v_LC['clifford'],
-                                              ext_fusion=v_LC['ext_fusion'])
+                    # Alter v_LC
+                    old_v_LC['name'] = str(graph.vcount())
+                    new_v_LC = graph.add_vertex(
+                        name=vname_LC,
+                        clifford=old_v_LC['clifford'],
+                        ext_fusion=old_v_LC['ext_fusion']
+                    )
 
-                    # Vertex having an external fusion with v_LC
-                    new_v2 = graph.add_vertex(name=str(graph.vcount()),
-                                              clifford=None,
-                                              ext_fusion=v_LC['name'])
+                    # Vertex having an external fusion with old v_LC
+                    v_ext_fusion = graph.add_vertex(
+                        name=str(graph.vcount()),
+                        clifford=None,
+                        ext_fusion=old_v_LC['name']
+                    )
 
-                    graph.add_edge(new_v1, new_v2)
+                    # Modify old v_LC
+                    old_v_LC['clifford'] = None
+                    old_v_LC['ext_fusion'] = v_ext_fusion['name']
 
-                    ngh_vids = graph.neighbors(vname_LC)
+                    graph.add_edge(new_v_LC, v_ext_fusion)
+
+                    old_vid_LC = old_v_LC.index
+                    ngh_vids = graph.neighbors(old_vid_LC)
                     for ngh_vid in ngh_vids:
                         if graph.vs[ngh_vid]['name'] not in clique:
-                            graph.add_edge(ngh_vid, new_v1)
-                            eids_to_delete.append(graph.get_eid(vname_LC,
-                                                                ngh_vid))
+                            graph.add_edge(ngh_vid, new_v_LC.index)
+                            eids_to_delete.append(
+                                graph.get_eid(old_vid_LC, ngh_vid)
+                            )
 
-                    vname_org_ext_fusion = v_LC['ext_fusion']
-                    if vname_org_ext_fusion is not None:
-                        v_org_ext_fusion = graph.vs.find(name=vname_org_ext_fusion)
-                        v_org_ext_fusion['ext_fusion'] = new_v1['name']
-
-                    v_LC['ext_fusion'] = new_v2['name']
-
-                    v_LC['name'], new_v1['name'] = new_v1['name'], vname_LC
-
-                # Apply LC
+                # Remove edges
                 adj_vnames = set(clique) - {vname_LC}
-                apply_clifford(v_LC, 'RX')
-                for adj_vname in adj_vnames:
-                    adj_v = graph.vs.find(name=adj_vname)
-                    apply_clifford(adj_v, 'RZd')
-
                 new_eids_to_delete = [graph.get_eid(vname1, vname2) for
                                       vname1, vname2 in
                                       itertools.combinations(adj_vnames, r=2)]
                 eids_to_delete.extend(new_eids_to_delete)
                 graph.delete_edges(eids_to_delete)
+
+                # Apply LC
+                apply_clifford(old_v_LC, 'RXd')
+                for adj_vname in adj_vnames:
+                    adj_v = graph.vs.find(name=adj_vname)
+                    apply_clifford(adj_v, 'RZ')
 
         return unraveled_cliques
 
@@ -781,6 +791,8 @@ class GraphState:
         eids_to_delete = list(set(fusion_network.incident(v_removed)))
         v_removed['on'] = False
 
+        calculate_ftpdf = 'ftpdf' in fusion_network.vertex_attributes()
+
         for eid_connected in eids_to_delete:
             e_connected: ig.Edge = fusion_network.es[eid_connected]
             attrs_e_connected = e_connected.attributes()
@@ -797,7 +809,7 @@ class GraphState:
                     )
                     if update_weight_and_order:
                         v_vrt.update_attributes(weight=0, weight_f=0, order=0)
-                    if 'ftpdf' in fusion_network.vertex_attributes():
+                    if calculate_ftpdf:
                         v_vrt['ftpdf'] = np.array([1])
                     new_edge_eps = [v_merged, v_vrt]
 
@@ -1172,7 +1184,7 @@ class GraphState:
                  optimize_num_fusions=False,
                  seed='keep',
                  verbose=True,
-                 pbar=False,
+                 pbar=True,
                  **kwargs):
         """
         Execute the strategy for a fixed number of iterations and obtain the
@@ -1252,10 +1264,8 @@ class GraphState:
         verbose : bool (default: True)
             Whether to print logs.
 
-        pbar : bool (default: False)
-            Whether to show a progress bar.
-
-            Ignored if `mp` is `False`
+        pbar : bool (default: True)
+            Whether to show a progress bar. Ignored if tqdm is not installed.
 
         kwargs : dict
             Additional keyword arguments for calculating overheads.
@@ -1305,6 +1315,11 @@ class GraphState:
                 print("Multiprocessing OFF.")
                 print(f"Calculating for n_iter = {n_iter}...")
 
+            if 'tqdm' not in sys.modules:
+                pbar = False
+                if verbose:
+                    print("Install tqdm package to see the progress bar.")
+
             if n_iter == 1 and seed is not None and seed != 'keep':
                 seeds_samples = [seed]
             else:
@@ -1319,7 +1334,10 @@ class GraphState:
 
             best_sample = None
             lowest_overhead = None
-            for i_sample in range(n_iter):
+            iterable = range(n_iter)
+            if pbar:
+                iterable = tqdm.tqdm(iterable)
+            for i_sample in iterable:
                 seed_sample = seeds_samples[i_sample]
                 np.random.seed(seed_sample)
 
@@ -1432,6 +1450,7 @@ class GraphState:
                 unravel_bcs_first=unravel_bcs_first,
                 fusion_order_strategy=fusion_order_strategy,
                 optimize_num_fusions=optimize_num_fusions,
+                pbar=False,
                 pm_pbar=pbar,
                 **kwargs)
             best_proc = np.argmin(
@@ -1474,7 +1493,7 @@ class GraphState:
                           optimize_num_fusions=False,
                           seed='keep',
                           verbose=True,
-                          pbar=False,
+                          pbar=True,
                           **kwargs):
         """
         Run the adaptive iteration method for the strategy and obtain the
@@ -1904,6 +1923,11 @@ class GraphState:
 
         save : None or str (default: None)
             Path to save the figure.
+
+        show_only_structure : bool (default: False)
+            If `True`, show only the network structure without any labels,
+            ignoring the values of parameters `show_node_names`, `show_link_names`,
+            `show_fusion_orders`, and `show_link_cliffords`.
 
         show_node_names : bool (default: True)
             If `True`, node names are shown.
