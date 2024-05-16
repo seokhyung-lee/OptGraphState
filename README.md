@@ -6,7 +6,7 @@
 
 **OptGraphState** is a python package that implements the graph-theoretical strategy to optimize the fusion-based
 generation of any graph state, which is proposed
-in [[Lee & Jeong, Quantum 7, 1212 (2023)](https://doi.org/10.22331/q-2023-12-20-1212)].
+in [Lee & Jeong, Quantum 7, 1212 (2023)](https://doi.org/10.22331/q-2023-12-20-1212).
 
 The package has the following features:
 
