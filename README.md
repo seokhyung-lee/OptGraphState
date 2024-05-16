@@ -41,9 +41,8 @@ The specified versions of these requirements are the ones with which we have tes
 
 ## Manuals
 
-Tutorials: [https://github.com/seokhyung-lee/OptGraphState/raw/main/tutorials.pdf](https://github.com/seokhyung-lee/OptGraphState/blob/196b565b3171eae622114d88bd8a79d4064d1d64/tutorials.pdf)
-
-API reference: https://seokhyung-lee.github.io/OptGraphState
+- [Tutorials](https://github.com/seokhyung-lee/OptGraphState/blob/196b565b3171eae622114d88bd8a79d4064d1d64/tutorials.pdf)
+- [API reference](https://seokhyung-lee.github.io/OptGraphState)
 
 ## License
 
@@ -51,16 +50,19 @@ OptGraphState is distributed under the MIT license. Please see the LICENSE file 
 
 ## Citation
 
-If you want to cite OptGraphState in an academic work, please cite the arXiv preprint:
+If you want to cite OptGraphState in an academic work, please cite the paper:
 
 ```
-@misc{lee2023graph,
-      title={Graph-theoretical optimization of fusion-based graph state generation}, 
-      author={Seok-Hyung Lee and Hyunseok Jeong},
-      year={2023},
-      eprint={2304.11988},
-      archivePrefix={arXiv},
-      primaryClass={quant-ph},
-      url={https://arxiv.org/abs/2304.11988}
+@article{lee2023graph,
+  doi = {10.22331/q-2023-12-20-1212},
+  title = {Graph-theoretical optimization of fusion-based graph state generation},
+  author = {Lee, Seok-Hyung and Jeong, Hyunseok},
+  journal = {{Quantum}},
+  issn = {2521-327X},
+  publisher = {{Verein zur F{\"{o}}rderung des Open Access Publizierens in den Quantenwissenschaften}},
+  volume = {7},
+  pages = {1212},
+  month = dec,
+  year = {2023}
 }
 ```
