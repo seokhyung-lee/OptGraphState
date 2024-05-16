@@ -22,10 +22,6 @@ The package has the following features:
   resource states required to generate the desired graph state.
 - Various predefined sample graphs for input.
 
-## Installation
-
-`pip install optgraphstate`
-
 ## Prerequisites
 The specified versions of these requirements are the ones with which we have tested OptGraphState. It is highly probable that newer versions work equally well.
 
@@ -38,6 +34,10 @@ The specified versions of these requirements are the ones with which we have tes
 - `matplotlib == 3.7.1`
 - `parmap == 1.6.0` (Optional, for multiprocessing)
 - `tqdm == 4.66.1` (Optional, for progress bar in multiprocessing)
+
+## Installation
+
+`pip install optgraphstate`
 
 ## Manuals
 
