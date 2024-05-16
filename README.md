@@ -41,7 +41,7 @@ The specified versions of these requirements are the ones with which we have tes
 
 ## Manuals
 
-Tutorials: https://github.com/seokhyung-lee/OptGraphState/raw/main/tutorials.pdf
+Tutorials: [https://github.com/seokhyung-lee/OptGraphState/raw/main/tutorials.pdf](https://github.com/seokhyung-lee/OptGraphState/blob/196b565b3171eae622114d88bd8a79d4064d1d64/tutorials.pdf)
 
 API reference: https://seokhyung-lee.github.io/OptGraphState
 
