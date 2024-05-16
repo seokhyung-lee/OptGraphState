@@ -37,7 +37,7 @@ The specified versions of these requirements are the ones with which we have tes
 - `networkx == 3.1`
 - `matplotlib == 3.7.1`
 - `parmap == 1.6.0` (Optional, for multiprocessing)
-- `tqdm == 4.66.1` (Optiona, for progress bar in multiprocessing)
+- `tqdm == 4.66.1` (Optional, for progress bar in multiprocessing)
 
 ## Manuals
 
