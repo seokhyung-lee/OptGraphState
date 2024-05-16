@@ -27,7 +27,7 @@ The package has the following features:
 `pip install optgraphstate`
 
 ## Prerequisites
-The specified versions of these requirements are the ones with which we has tested OptGraphState. It is highly probable that newer versions work equally well.
+The specified versions of these requirements are the ones with which we have tested OptGraphState. It is highly probable that newer versions work equally well.
 
 (Exceptionally, we have checked that the latest version of `python-igraph` raises an error when visualizing graphs due to internal changes of the library.)
 
