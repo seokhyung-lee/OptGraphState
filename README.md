@@ -27,7 +27,8 @@ The specified versions of these requirements are the ones with which we have tes
 
 (Exceptionally, we have checked that the latest version of `python-igraph` raises an error when visualizing graphs due to some internal changes of the library related to plotting graphs. Other functions may work well.)
 
-- `python == 3.9`
+Requires Python >= 3.9.
+
 - `numpy == 1.24.2`
 - `python-igraph == 0.10.4`
 - `networkx == 3.1`
